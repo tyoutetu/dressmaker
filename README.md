@@ -391,9 +391,18 @@ Every image it renders is billed, so run it deliberately.
 - **GA4 (optional):** `tool_view`, `npc_selected`, `image_upload_started`,
   `image_upload_success`, `generate_clicked`, `generation_success`,
   `generation_failed`, `limit_reached`, `result_downloaded`, `regenerate_clicked`,
-  `switch_npc_after_result`, `result_feedback`, `feedback_submitted` — with
+  `switch_npc_after_result`, `result_feedback`, `feedback_submitted`,
+  `share_clicked`, `share_completed`, `share_failed` — with
   low-cardinality parameters only. Images, file names and feedback text are never
   sent to GA4.
+
+  The share events carry `method` (`sheet` when the phone's share sheet opened,
+  `download` when the desktop download link was used) and, on failure,
+  `error_type` (`cancelled` when the visitor dismissed the share sheet,
+  `rejected` when the browser refused the share). `share_clicked` is the
+  denominator for the funnel: `share_completed / share_clicked` is the share
+  success rate, and the point of the whole feature is that a shared image brings
+  a new visitor back through the QR code.
 
 ## 10. Known limitations
 

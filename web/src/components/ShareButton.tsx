@@ -7,6 +7,7 @@ import {
   type PreparedShareCard,
   type ShareCapableNavigator,
 } from "../lib/shareCard";
+import { track } from "../lib/analytics";
 import { IconAlert, IconShare } from "./Icons";
 
 interface Props {
@@ -65,6 +66,7 @@ export function ShareButton({ imageDataUrl, npcId, npcName, siteUrl, busy }: Pro
     if (!card || phase === "preparing") return;
     const nav = navigator as ShareCapableNavigator;
     if (!canShareImage(nav, card.file)) return;
+    track("share_clicked", { npc_id: npcId, method: "sheet" });
     try {
       await nav.share!({
         files: [card.file],
@@ -73,12 +75,23 @@ export function ShareButton({ imageDataUrl, npcId, npcName, siteUrl, busy }: Pro
       });
       setPhase("shared");
       setError(null);
+      track("share_completed", { npc_id: npcId, method: "sheet" });
     } catch (cause: unknown) {
-      // Dismissing the share sheet is a normal outcome, not a failure.
-      if (cause instanceof DOMException && cause.name === "AbortError") return;
-      setPhase("failed");
-      setError("Sharing was cancelled by the browser. Use Download instead.");
+      // Dismissing the share sheet is a normal outcome, not a failure — but it
+      // is worth telling apart from a share the browser actually refused.
+      const cancelled = cause instanceof DOMException && cause.name === "AbortError";
+      setPhase(cancelled ? "ready" : "failed");
+      setError(cancelled ? null : "Sharing was cancelled by the browser. Use Download instead.");
+      track("share_failed", {
+        npc_id: npcId,
+        error_type: cancelled ? "cancelled" : "rejected",
+      });
     }
+  }
+
+  /** The desktop fallback is a real download link, so this is its own signal. */
+  function handleDownloadClick(): void {
+    track("share_clicked", { npc_id: npcId, method: "download" });
   }
 
   if (phase === "failed" || phase === "preparing") {
@@ -98,7 +111,7 @@ export function ShareButton({ imageDataUrl, npcId, npcName, siteUrl, busy }: Pro
   // Desktop: a genuine link, so the visitor's own click starts the download.
   if (!canShareImage(navigator as ShareCapableNavigator, card!.file)) {
     return (
-      <a className="btn btn-secondary" href={card!.url} download={card!.filename}>
+      <a className="btn btn-secondary" href={card!.url} download={card!.filename} onClick={handleDownloadClick}>
         <IconShare width={18} height={18} />
         Share image
       </a>
