@@ -1,0 +1,77 @@
+name: Deploy web to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - "api/lib/npcs.ts" # the customer list lives with the API; the web build reads it
+      - ".github/workflows/deploy-web.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+
+      # Project sites live at https://<user>.github.io/<repo>/, user sites and
+      # custom domains live at the root. Set the repository variable
+      # VITE_BASE_PATH (e.g. "/") to override the default.
+      - name: Resolve base path
+        id: base
+        env:
+          CONFIGURED_BASE: ${{ vars.VITE_BASE_PATH }}
+          REPO_NAME: ${{ github.event.repository.name }}
+        run: |
+          if [ -n "$CONFIGURED_BASE" ]; then
+            echo "value=$CONFIGURED_BASE" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=/$REPO_NAME/" >> "$GITHUB_OUTPUT"
+          fi
+
+      # VITE_SITE_URL must be the address visitors actually reach the site on,
+      # because the share card's QR code encodes it verbatim. It cannot be
+      # derived from the base path here: `steps.base` defaults to /<repo>/ while
+      # the deployment URL is absolute. Leave the variable unset and the share
+      # control simply does not render, rather than printing a QR that leads
+      # nowhere.
+      - name: Build
+        run: npm run build -- --base="${{ steps.base.outputs.value }}"
+        env:
+          VITE_API_BASE: ${{ vars.VITE_API_BASE }}
+          VITE_GA4_ID: ${{ vars.VITE_GA4_ID }}
+          VITE_SITE_URL: ${{ vars.VITE_SITE_URL }}
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
