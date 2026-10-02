@@ -2,6 +2,15 @@ node_modules/
 dist/
 .vercel/
 
+# npm's default cache lives in ~/.npm, which the agent sandbox blocks. Point
+# npm at a cache inside the workspace instead, so `npm install` works here:
+#   npm --cache .npm-cache install
+.npm-cache/
+
+# Vercel CLI installed locally (a global install writes outside the workspace,
+# which the sandbox blocks). Run it as ./.vercel-cli/node_modules/.bin/vercel
+.vercel-cli/
+
 # Real environment files at any level; only the template is tracked.
 .env
 .env.*
@@ -13,3 +22,8 @@ dist/
 *.log
 spike-out/
 .DS_Store
+
+# Local paid-spike fixtures: game screenshots used as spike input, not build
+# inputs. Kept out of the public repo so it does not accumulate game art and
+# multi-megabyte PNGs; the README documents the path for running the spike.
+test-dresses/
