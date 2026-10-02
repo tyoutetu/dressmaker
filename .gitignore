@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.vercel/
+
+# Real environment files at any level; only the template is tracked.
+.env
+.env.*
+!.env.example
+*.env
+*.env.*
+!*.env.example
+
+*.log
+spike-out/
+.DS_Store

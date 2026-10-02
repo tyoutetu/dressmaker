@@ -1,0 +1,29 @@
+{
+  "name": "dressmaker-preview-api",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test --test-timeout=60000 tests/*.test.ts",
+    "mock": "node --env-file-if-exists=.env --import tsx scripts/mock-server.ts",
+    "spike": "node --env-file-if-exists=.env --import tsx scripts/spike.ts",
+    "db:init": "node --env-file-if-exists=.env --import tsx scripts/db-init.ts"
+  },
+  "dependencies": {
+    "@google/genai": "^1.30.0",
+    "@neondatabase/serverless": "^1.0.0",
+    "openai": "^6.7.0",
+    "sharp": "^0.34.4"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.3.15",
+    "@types/node": "^24.10.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "sharp@0.34.5": true
+  }
+}
