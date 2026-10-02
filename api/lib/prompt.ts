@@ -30,3 +30,25 @@ Strict requirements:
 export function buildPrompt(npc: NpcConfig): string {
   return `${BASE_PROMPT}\n\nAbout this customer (${npc.name}): ${npc.promptNotes}`;
 }
+
+/**
+ * Sent as `negative_prompt` alongside the prompt above.
+ *
+ * The spike's failure mode was not sleeves as such but *layering*: the model
+ * kept the customer's own blouse on underneath, so a sleeveless gown came back
+ * with the reference art's long sleeves. That distinction decides the wording —
+ * a blanket "long sleeves" negative would suppress the perfectly legitimate long
+ * sleeves of other dresses (two of the five test dresses have them), so this
+ * list names the layering itself and lets the dress screenshot decide the
+ * sleeve. It is a behaviour to avoid, not a garment to ban.
+ */
+export const NEGATIVE_PROMPT = [
+  "two outfits worn at once",
+  "layered clothing",
+  "a second garment underneath the dress",
+  "blouse showing under the dress",
+  "shirt visible beneath the dress",
+  "clothes sticking out from under the dress",
+  "dress worn over other clothes",
+  "extra fabric at the shoulders from an undergarment",
+].join(", ");

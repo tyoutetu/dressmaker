@@ -15,7 +15,7 @@ import {
 import { buildQuotaSnapshot, quotaVariantFor, utcDayKey, type QuotaSnapshot } from "../lib/quota";
 import { loadNpcReference } from "../lib/npcAssets";
 import { DEFAULT_MAX_OUTPUT_BYTES } from "../lib/output";
-import { buildPrompt } from "../lib/prompt";
+import { buildPrompt, NEGATIVE_PROMPT } from "../lib/prompt";
 import { asProviderError, getProvider } from "../lib/provider";
 import { readMaxUploadBytes, validateImage } from "../lib/validation";
 
@@ -131,6 +131,7 @@ export async function route(request: Request): Promise<Response> {
         npcReference,
         dressScreenshot: { data: validated.buffer, mime: validated.mime },
         prompt: buildPrompt(npc),
+        negativePrompt: NEGATIVE_PROMPT,
         signal: AbortSignal.timeout(timeoutMs),
         maxOutputBytes: readPositiveInt(process.env, "MAX_OUTPUT_BYTES", DEFAULT_MAX_OUTPUT_BYTES),
       });

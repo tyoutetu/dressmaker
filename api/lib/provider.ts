@@ -16,6 +16,11 @@ export interface GenerateInput {
   /** Player's dress screenshot (the design to migrate), JPEG. */
   dressScreenshot: ImageInput;
   prompt: string;
+  /**
+   * What the model should avoid. Optional: providers that do not support a
+   * negative prompt simply ignore it.
+   */
+  negativePrompt?: string;
   signal?: AbortSignal;
   /** Upper bound for the returned PNG so the HTTP response stays small. */
   maxOutputBytes?: number;

@@ -131,6 +131,7 @@ export class QwenProvider implements ImageGenerationProvider {
     const body = buildQwenImageBody({
       model: this.model,
       prompt: input.prompt,
+      negativePrompt: input.negativePrompt,
       npcReference: input.npcReference,
       dressScreenshot: input.dressScreenshot,
       promptExtend: this.promptExtend,
@@ -213,6 +214,7 @@ export class QwenProvider implements ImageGenerationProvider {
 export interface QwenBodyParams {
   model: string;
   prompt: string;
+  negativePrompt?: string;
   npcReference: ImageInput;
   dressScreenshot: ImageInput;
   promptExtend?: boolean;
@@ -224,6 +226,7 @@ export interface QwenBodyParams {
  *
  * `prompt_extend` and `enable_thinking` are always written out: the platform
  * turns both on when they are absent, and this product wants them off.
+ * `negative_prompt` is only sent when there is one to send.
  */
 export function buildQwenImageBody(params: QwenBodyParams): Record<string, unknown> {
   const body: Record<string, unknown> = {
@@ -235,6 +238,8 @@ export function buildQwenImageBody(params: QwenBodyParams): Record<string, unkno
     prompt_extend: params.promptExtend ?? DEFAULT_PROMPT_EXTEND,
     enable_thinking: params.enableThinking ?? DEFAULT_ENABLE_THINKING,
   };
+  const negative = (params.negativePrompt ?? "").trim();
+  if (negative) body.negative_prompt = negative;
   return body;
 }
 

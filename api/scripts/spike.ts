@@ -14,7 +14,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { NPCS } from "../lib/npcs";
-import { buildPrompt } from "../lib/prompt";
+import { buildPrompt, NEGATIVE_PROMPT } from "../lib/prompt";
 import { getProvider, type ImageInput } from "../lib/provider";
 import { loadNpcReference } from "../lib/npcAssets";
 import sharp from "sharp";
@@ -90,6 +90,7 @@ async function main() {
         npcReference,
         dressScreenshot: { data: screenshot, mime: "image/jpeg" },
         prompt,
+        negativePrompt: NEGATIVE_PROMPT,
         signal: AbortSignal.timeout(120_000),
       });
       const seconds = ((Date.now() - startedAt) / 1000).toFixed(1);

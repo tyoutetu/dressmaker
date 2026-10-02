@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { buildPrompt } from "../lib/prompt";
+import { buildPrompt, NEGATIVE_PROMPT } from "../lib/prompt";
 import { ENABLED_NPCS } from "../lib/npcs";
 
 /**
@@ -47,5 +47,27 @@ describe("generation prompt", () => {
       assert.ok(text.includes(npc.name), `${npc.id} prompt names the customer`);
       assert.ok(text.includes(npc.promptNotes), `${npc.id} prompt carries its notes`);
     }
+  });
+});
+
+describe("negative prompt", () => {
+  test("targets layering, not sleeves", () => {
+    // A blanket "long sleeves" negative would wreck the dresses that genuinely
+    // have them — two of the five test dresses do — so the wording has to name
+    // the behaviour (wearing two garments at once) instead of the garment.
+    assert.match(NEGATIVE_PROMPT, /layered clothing/i);
+    assert.match(NEGATIVE_PROMPT, /two outfits worn at once/i);
+    assert.match(NEGATIVE_PROMPT, /underneath the dress/i);
+    assert.ok(
+      !/\blong sleeves\b/i.test(NEGATIVE_PROMPT),
+      "must not ban long sleeves outright",
+    );
+  });
+
+  test("is a non-empty, comma-separated phrase list", () => {
+    assert.ok(NEGATIVE_PROMPT.trim().length > 0);
+    const phrases = NEGATIVE_PROMPT.split(",").map((p) => p.trim());
+    assert.ok(phrases.length >= 4, "several distinct phrases");
+    assert.ok(phrases.every((p) => p.length > 0), "no empty phrase");
   });
 });

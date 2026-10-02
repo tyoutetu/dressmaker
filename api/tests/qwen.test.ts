@@ -82,6 +82,24 @@ describe("Qwen request contract", () => {
     );
   });
 
+  test("sends negative_prompt only when there is one", () => {
+    const base = {
+      model: "m",
+      prompt: "p",
+      npcReference: { data: Buffer.from([1]), mime: "image/png" },
+      dressScreenshot: { data: Buffer.from([2]), mime: "image/jpeg" },
+    };
+    assert.ok(!("negative_prompt" in buildQwenImageBody(base)), "omitted when absent");
+    assert.ok(
+      !("negative_prompt" in buildQwenImageBody({ ...base, negativePrompt: "   " })),
+      "omitted when blank — the API rejects an empty string",
+    );
+    assert.equal(
+      buildQwenImageBody({ ...base, negativePrompt: "layered clothing" }).negative_prompt,
+      "layered clothing",
+    );
+  });
+
   test("builds the documented OpenAI-compatible endpoint", () => {
     assert.equal(
       resolveImageEndpoint("https://dashscope.aliyuncs.com").toString(),
