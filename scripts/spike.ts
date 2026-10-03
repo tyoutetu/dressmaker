@@ -13,10 +13,10 @@
  */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { NPCS } from "../lib/npcs";
-import { buildPrompt, NEGATIVE_PROMPT } from "../lib/prompt";
-import { getProvider, type ImageInput } from "../lib/provider";
-import { loadNpcReference } from "../lib/npcAssets";
+import { NPCS } from "../lib/npcs.js";
+import { buildPrompt, NEGATIVE_PROMPT } from "../lib/prompt.js";
+import { getProvider, type ImageInput } from "../lib/provider.js";
+import { loadNpcReference } from "../lib/npcAssets.js";
 import sharp from "sharp";
 
 interface Args {

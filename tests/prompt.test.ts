@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { buildPrompt, NEGATIVE_PROMPT } from "../lib/prompt";
-import { ENABLED_NPCS } from "../lib/npcs";
+import { buildPrompt, NEGATIVE_PROMPT } from "../lib/prompt.js";
+import { ENABLED_NPCS } from "../lib/npcs.js";
 
 /**
  * A live spike showed the model keeping the customer's own long sleeves under

@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
-import { ApiError } from "../errors";
-import { normalizeOutputImage } from "../output";
-import { estimatedCost, type GenerateInput, type GenerateResult, type ImageGenerationProvider } from "../provider";
+import { ApiError } from "../errors.js";
+import { normalizeOutputImage } from "../output.js";
+import { estimatedCost, type GenerateInput, type GenerateResult, type ImageGenerationProvider } from "../provider.js";
 
 /**
  * Gemini image editing (nano-banana family). Passes the NPC reference as the

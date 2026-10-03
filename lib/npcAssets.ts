@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
-import { ApiError } from "./errors";
-import type { ImageInput } from "./provider";
+import { ApiError } from "./errors.js";
+import type { ImageInput } from "./provider.js";
 
 /**
  * Customer reference art lives in `assets/npcs/` at the project root and is

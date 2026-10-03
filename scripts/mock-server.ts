@@ -22,9 +22,9 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { pathToFileURL } from "node:url";
 import sharp from "sharp";
-import { findNpc } from "../lib/npcs";
-import { buildQuotaSnapshot, utcDayKey } from "../lib/quota";
-import { USER_DAILY_GENERATION_LIMIT_MAX } from "../lib/config";
+import { findNpc } from "../lib/npcs.js";
+import { buildQuotaSnapshot, utcDayKey } from "../lib/quota.js";
+import { USER_DAILY_GENERATION_LIMIT_MAX } from "../lib/config.js";
 
 export interface MockLimits {
   userLimit: number;

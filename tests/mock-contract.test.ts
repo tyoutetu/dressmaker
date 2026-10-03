@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { createMockApi } from "../scripts/mock-server";
-import { tinyJpeg } from "./helpers";
+import { createMockApi } from "../scripts/mock-server.js";
+import { tinyJpeg } from "./helpers.js";
 
 /**
  * The local mock exists so a reviewer can click through the whole flow. It has

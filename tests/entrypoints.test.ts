@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { describe, test } from "node:test";
-import generateDefault, { route as generate } from "../api/generate";
-import quotaDefault, { route as quota } from "../api/quota";
-import feedbackDefault, { route as feedback } from "../api/feedback";
-import healthDefault, { route as health } from "../api/health";
+import generateDefault, { route as generate } from "../api/generate.js";
+import quotaDefault, { route as quota } from "../api/quota.js";
+import feedbackDefault, { route as feedback } from "../api/feedback.js";
+import healthDefault, { route as health } from "../api/health.js";
 
 /**
  * Vercel's current documented Node.js runtime shape is a Web-standard function:

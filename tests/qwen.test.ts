@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { before, describe, test } from "node:test";
 import sharp from "sharp";
-import { ApiError } from "../lib/errors";
+import { ApiError } from "../lib/errors.js";
 import {
   assertResultUrl,
   buildQwenImageBody,
@@ -10,8 +10,8 @@ import {
   parseQwenResponse,
   resolveImageEndpoint,
   QwenProvider,
-} from "../lib/providers/qwen";
-import { tinyJpeg, tinyPng } from "./helpers";
+} from "../lib/providers/qwen.js";
+import { tinyJpeg, tinyPng } from "./helpers.js";
 
 describe("Qwen request contract", () => {
   test("sends both images as data URLs with n=1 and a fixed size", async () => {

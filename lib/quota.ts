@@ -1,4 +1,4 @@
-import type { QuotaLimits } from "./config";
+import type { QuotaLimits } from "./config.js";
 
 /**
  * The quota window is a UTC calendar day, so the reset moment is unambiguous

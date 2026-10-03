@@ -11,7 +11,7 @@
  * Node without a DOM — the same split `download.ts` uses.
  */
 
-import { encodeQr } from "./qr";
+import { encodeQr } from "./qr.js";
 
 /** 4:5 — the tallest ratio that survives uncropped on the usual social feeds. */
 export const SHARE_CARD_WIDTH = 1080;

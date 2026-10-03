@@ -1,7 +1,7 @@
 import OpenAI, { APIError } from "openai";
-import { ApiError } from "../errors";
-import { normalizeOutputImage } from "../output";
-import { estimatedCost, type GenerateInput, type GenerateResult, type ImageGenerationProvider } from "../provider";
+import { ApiError } from "../errors.js";
+import { normalizeOutputImage } from "../output.js";
+import { estimatedCost, type GenerateInput, type GenerateResult, type ImageGenerationProvider } from "../provider.js";
 
 /**
  * OpenAI image editing (gpt-image-1). The first image is the NPC reference

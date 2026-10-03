@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { route as generate } from "../api/generate";
-import { route as quotaEndpoint } from "../api/quota";
-import { route as health } from "../api/health";
-import { setDbForTests } from "../lib/db";
-import { ApiError } from "../lib/errors";
-import { setProviderForTests } from "../lib/provider";
+import { route as generate } from "../api/generate.js";
+import { route as quotaEndpoint } from "../api/quota.js";
+import { route as health } from "../api/health.js";
+import { setDbForTests } from "../lib/db.js";
+import { ApiError } from "../lib/errors.js";
+import { setProviderForTests } from "../lib/provider.js";
 import {
   createTestDb,
   fakeProvider,
@@ -14,7 +14,7 @@ import {
   withEnv,
   type FakeProvider,
   type TestDb,
-} from "./helpers";
+} from "./helpers.js";
 
 const SECRET = "test-secret-at-least-16-chars";
 const TRUSTED = { "x-vercel-forwarded-for": "198.51.100.50" };

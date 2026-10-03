@@ -5,9 +5,9 @@ import {
   readNonNegativeDecimal,
   readQuotaLimits,
   USER_DAILY_GENERATION_LIMIT_MAX,
-} from "../lib/config";
-import { ApiError } from "../lib/errors";
-import { estimatedCost } from "../lib/provider";
+} from "../lib/config.js";
+import { ApiError } from "../lib/errors.js";
+import { estimatedCost } from "../lib/provider.js";
 
 describe("per-network limit configuration", () => {
   test("defaults to the product maximum and allows lowering or zero", () => {

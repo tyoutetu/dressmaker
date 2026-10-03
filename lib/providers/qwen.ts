@@ -1,12 +1,12 @@
-import { ApiError } from "../errors";
-import { normalizeOutputImage } from "../output";
+import { ApiError } from "../errors.js";
+import { normalizeOutputImage } from "../output.js";
 import {
   estimatedCost,
   type GenerateInput,
   type GenerateResult,
   type ImageGenerationProvider,
   type ImageInput,
-} from "../provider";
+} from "../provider.js";
 
 /**
  * Qwen Image (DashScope) adapter.

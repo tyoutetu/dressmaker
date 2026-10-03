@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { hashIp, normalizeIp, parseTrustedAddress, resolveClientIp } from "../lib/ip";
+import { hashIp, normalizeIp, parseTrustedAddress, resolveClientIp } from "../lib/ip.js";
 
 describe("IP normalization", () => {
   test("canonicalizes strict IPv4 and rejects malformed input", () => {

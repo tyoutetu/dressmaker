@@ -1,7 +1,7 @@
-import { ApiError, USER_MESSAGES } from "../lib/errors";
-import { corsHeaders, errorResponse, isOriginAllowed, json } from "../lib/env";
-import { getDb } from "../lib/db";
-import { readBoundedJson } from "../lib/body";
+import { ApiError, USER_MESSAGES } from "../lib/errors.js";
+import { corsHeaders, errorResponse, isOriginAllowed, json } from "../lib/env.js";
+import { getDb } from "../lib/db.js";
+import { readBoundedJson } from "../lib/body.js";
 
 const RATINGS = new Set(["yes", "kind_of", "no"]);
 const MAX_TEXT = 500;

@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { after, before, describe, test } from "node:test";
 import { PGlite } from "@electric-sql/pglite";
-import { readQuotaCounters, reserveQuota } from "../lib/db";
-import { hashIp, resolveClientIp } from "../lib/ip";
-import { utcDayKey, nextUtcReset, buildQuotaSnapshot } from "../lib/quota";
-import { createTestDb, neonLike, type TestDb } from "./helpers";
+import { readQuotaCounters, reserveQuota } from "../lib/db.js";
+import { hashIp, resolveClientIp } from "../lib/ip.js";
+import { utcDayKey, nextUtcReset, buildQuotaSnapshot } from "../lib/quota.js";
+import { createTestDb, neonLike, type TestDb } from "./helpers.js";
 
 /**
  * These tests run the real api/sql/schema.sql on embedded Postgres, so the

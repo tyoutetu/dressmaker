@@ -1,4 +1,4 @@
-import type { NpcConfig } from "./npcs";
+import type { NpcConfig } from "./npcs.js";
 
 /**
  * One prompt used for every customer, plus per-customer notes from lib/npcs.ts:

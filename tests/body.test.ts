@@ -5,8 +5,8 @@ import {
   readBoundedFormData,
   readBoundedJson,
   requestBodyLimitBytes,
-} from "../lib/body";
-import { ApiError } from "../lib/errors";
+} from "../lib/body.js";
+import { ApiError } from "../lib/errors.js";
 
 function jsonRequest(body: unknown): Request {
   return new Request("http://localhost:3000/api/feedback", {

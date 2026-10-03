@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
-import { route as feedback } from "../api/feedback";
-import { setDbForTests } from "../lib/db";
-import { createTestDb, type TestDb } from "./helpers";
+import { route as feedback } from "../api/feedback.js";
+import { setDbForTests } from "../lib/db.js";
+import { createTestDb, type TestDb } from "./helpers.js";
 
 const GENERATION_ID = "123e4567-e89b-12d3-a456-426614174000";
 

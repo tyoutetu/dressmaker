@@ -1,9 +1,9 @@
-import { findNpc } from "../lib/npcs";
-import { ApiError, USER_MESSAGES } from "../lib/errors";
-import { corsHeaders, errorResponse, isOriginAllowed, json } from "../lib/env";
-import { getDb, insertGeneration, reserveQuota } from "../lib/db";
-import { readBoundedFormData, requestBodyLimitBytes } from "../lib/body";
-import { hashIp, resolveClientIp } from "../lib/ip";
+import { findNpc } from "../lib/npcs.js";
+import { ApiError, USER_MESSAGES } from "../lib/errors.js";
+import { corsHeaders, errorResponse, isOriginAllowed, json } from "../lib/env.js";
+import { getDb, insertGeneration, reserveQuota } from "../lib/db.js";
+import { readBoundedFormData, requestBodyLimitBytes } from "../lib/body.js";
+import { hashIp, resolveClientIp } from "../lib/ip.js";
 import {
   isLocalQuotaMode,
   isUnlimitedNetwork,
@@ -12,13 +12,13 @@ import {
   readPositiveInt,
   readQuotaLimits,
   type QuotaLimits,
-} from "../lib/config";
-import { buildQuotaSnapshot, quotaVariantFor, utcDayKey, type QuotaSnapshot } from "../lib/quota";
-import { loadNpcReference } from "../lib/npcAssets";
-import { DEFAULT_MAX_OUTPUT_BYTES } from "../lib/output";
-import { buildPrompt, NEGATIVE_PROMPT } from "../lib/prompt";
-import { asProviderError, getProvider } from "../lib/provider";
-import { readMaxUploadBytes, validateImage } from "../lib/validation";
+} from "../lib/config.js";
+import { buildQuotaSnapshot, quotaVariantFor, utcDayKey, type QuotaSnapshot } from "../lib/quota.js";
+import { loadNpcReference } from "../lib/npcAssets.js";
+import { DEFAULT_MAX_OUTPUT_BYTES } from "../lib/output.js";
+import { buildPrompt, NEGATIVE_PROMPT } from "../lib/prompt.js";
+import { asProviderError, getProvider } from "../lib/provider.js";
+import { readMaxUploadBytes, validateImage } from "../lib/validation.js";
 
 /**
  * POST /api/generate  (multipart/form-data)

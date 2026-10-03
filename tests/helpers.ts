@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
 import sharp from "sharp";
-import type { Sql } from "../lib/db";
-import type { ImageGenerationProvider } from "../lib/provider";
+import type { Sql } from "../lib/db.js";
+import type { ImageGenerationProvider } from "../lib/provider.js";
 
 /**
  * Real Postgres semantics without a server: PGlite is an embedded Postgres that

@@ -1,8 +1,8 @@
-import { ApiError } from "./errors";
-import { readNonNegativeDecimal } from "./config";
-import { GeminiProvider } from "./providers/gemini";
-import { OpenAIProvider } from "./providers/openai";
-import { QwenProvider } from "./providers/qwen";
+import { ApiError } from "./errors.js";
+import { readNonNegativeDecimal } from "./config.js";
+import { GeminiProvider } from "./providers/gemini.js";
+import { OpenAIProvider } from "./providers/openai.js";
+import { QwenProvider } from "./providers/qwen.js";
 
 /** An image handed to a model, always with an explicit MIME type. */
 export interface ImageInput {

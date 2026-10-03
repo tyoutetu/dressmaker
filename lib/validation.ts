@@ -1,6 +1,6 @@
 import sharp from "sharp";
-import { ApiError } from "./errors";
-import { numEnv } from "./env";
+import { ApiError } from "./errors.js";
+import { numEnv } from "./env.js";
 
 export type SupportedMime = "image/jpeg" | "image/png" | "image/webp";
 const ACCEPTED: ReadonlySet<string> = new Set(["image/jpeg", "image/png", "image/webp"]);

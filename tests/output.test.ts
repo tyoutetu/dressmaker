@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import sharp from "sharp";
-import { ApiError } from "../lib/errors";
-import { normalizeOutputImage } from "../lib/output";
+import { ApiError } from "../lib/errors.js";
+import { normalizeOutputImage } from "../lib/output.js";
 
 async function solid(width: number, height: number): Promise<Buffer> {
   return sharp({ create: { width, height, channels: 3, background: "#336699" } })

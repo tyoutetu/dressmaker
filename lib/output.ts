@@ -1,5 +1,5 @@
 import sharp from "sharp";
-import { ApiError } from "./errors";
+import { ApiError } from "./errors.js";
 
 /**
  * Provider output normalization.

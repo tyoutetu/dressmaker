@@ -1,16 +1,16 @@
-import { USER_MESSAGES, ApiError } from "../lib/errors";
-import { corsHeaders, errorResponse, isOriginAllowed, json } from "../lib/env";
-import { getDb, readQuotaCounters } from "../lib/db";
-import { hashIp, resolveClientIp } from "../lib/ip";
+import { USER_MESSAGES, ApiError } from "../lib/errors.js";
+import { corsHeaders, errorResponse, isOriginAllowed, json } from "../lib/env.js";
+import { getDb, readQuotaCounters } from "../lib/db.js";
+import { hashIp, resolveClientIp } from "../lib/ip.js";
 import {
   isLocalQuotaMode,
   isUnlimitedNetwork,
   isVercelRuntime,
   readIpHashSecret,
   readQuotaLimits,
-} from "../lib/config";
-import { buildQuotaSnapshot, utcDayKey } from "../lib/quota";
-import { DEFAULT_PROVIDER } from "../lib/provider";
+} from "../lib/config.js";
+import { buildQuotaSnapshot, utcDayKey } from "../lib/quota.js";
+import { DEFAULT_PROVIDER } from "../lib/provider.js";
 
 /**
  * GET /api/quota — the visitor's remaining previews for today.

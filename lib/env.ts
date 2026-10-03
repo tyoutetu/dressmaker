@@ -1,4 +1,4 @@
-import type { GenErrorCode } from "./errors";
+import type { GenErrorCode } from "./errors.js";
 
 export function numEnv(key: string, fallback: number): number {
   const raw = process.env[key];

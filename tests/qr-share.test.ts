@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { alignmentPositions, chooseVersion, encodeQr, MAX_QR_VERSION } from "../web/src/lib/qr";
+import { alignmentPositions, chooseVersion, encodeQr, MAX_QR_VERSION } from "../web/src/lib/qr.js";
 import {
   canShareImage,
   displayUrl,
@@ -12,7 +12,7 @@ import {
   shareLayout,
   SHARE_CARD_HEIGHT,
   SHARE_CARD_WIDTH,
-} from "../web/src/lib/shareCard";
+} from "../web/src/lib/shareCard.js";
 
 /**
  * The share card is the one artefact that leaves the site, so it has to be right

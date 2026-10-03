@@ -1,7 +1,7 @@
 import { neon } from "@neondatabase/serverless";
-import type { QuotaLimits } from "./config";
-import { ApiError } from "./errors";
-import type { ReserveReason, ReserveResult } from "./quota";
+import type { QuotaLimits } from "./config.js";
+import { ApiError } from "./errors.js";
+import type { ReserveReason, ReserveResult } from "./quota.js";
 
 /**
  * Neon Postgres over HTTP. Every statement is a single round trip, which is why

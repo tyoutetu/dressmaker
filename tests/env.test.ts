@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, test } from "node:test";
-import { corsHeaders, isOriginAllowed } from "../lib/env";
+import { corsHeaders, isOriginAllowed } from "../lib/env.js";
 
 /**
  * The origin allowlist is the one thing standing between a browser and the paid

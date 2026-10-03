@@ -6,8 +6,8 @@ import {
   failureChargeNote,
   generationAllowed,
   quotaBlockCopy,
-} from "../web/src/lib/outcome";
-import { dataUrlToBlob, prepareResultDownload, resultFilename } from "../web/src/lib/download";
+} from "../web/src/lib/outcome.js";
+import { dataUrlToBlob, prepareResultDownload, resultFilename } from "../web/src/lib/download.js";
 
 /**
  * The browser cannot know the outcome of a request it never finished reading,

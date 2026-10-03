@@ -1,7 +1,7 @@
-import { corsHeaders, json, isOriginAllowed } from "../lib/env";
-import { getDb } from "../lib/db";
-import { isLocalQuotaMode, isVercelRuntime, readQuotaLimits } from "../lib/config";
-import { DEFAULT_PROVIDER, providerConfigured } from "../lib/provider";
+import { corsHeaders, json, isOriginAllowed } from "../lib/env.js";
+import { getDb } from "../lib/db.js";
+import { isLocalQuotaMode, isVercelRuntime, readQuotaLimits } from "../lib/config.js";
+import { DEFAULT_PROVIDER, providerConfigured } from "../lib/provider.js";
 
 /**
  * GET /api/health — deployment smoke check.

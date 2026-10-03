@@ -1,5 +1,5 @@
-import { ApiError } from "./errors";
-import type { GenErrorCode } from "./errors";
+import { ApiError } from "./errors.js";
+import type { GenErrorCode } from "./errors.js";
 
 /**
  * Bounded request-body reading for the Web-standard function entrypoints.
