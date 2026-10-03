@@ -49,6 +49,48 @@ README 定位原文要点：
 
 倒序。**建档时未运行任何构建/测试**，故区分「建档实测」与「仓库内既有证据」。
 
+### 2026-10-03 — 修复线上函数全部 500（ESM 扩展名）+ 生产环境首次成功出图
+
+- 提交 `7a99135`（另含 `33a3379` 的 QUOTA_UNLIMITED_IPS）
+- **现象**：`/api/health` 与 `/api/quota` 均返回 500 `FUNCTION_INVOCATION_FAILED`。
+  表面看一切正常：构建绿、部署 READY、函数数正好 4——**但 4 个函数一个都跑不起来。**
+- **真因（`vercel logs` 原文）**：
+  ```
+  Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/lib/errors'
+    imported from '/var/task/api/quota.js'
+  ```
+  Vercel 把 TS **逐个编译成独立 ESM `.js`（不打包）**，而 Node ESM **不做扩展名推断**，
+  所以 `../lib/env` 这类无扩展名相对导入永远解析不到，函数在模块加载阶段就崩。
+- **修法**：
+  - 34 个文件的相对导入补 `.js`（`api/` `lib/` `scripts/` `tests/`）
+  - `web/src/lib/shareCard.ts` 的 `./qr` → `./qr.js`（被 tests 经 `.js` 拉进根 tsconfig）
+  - **`tsconfig.json` 的 `module`/`moduleResolution` 由 `Bundler` 改为 `NodeNext`**
+    —— 把编译器和运行时对齐，以后漏扩展名会在 `npm run typecheck` 直接报 TS2835，
+    而不是等线上 500
+- **教训（重要）**：**构建绿 + 部署 READY + 函数数正确，都不等于函数能跑。**
+  此前多轮把「构建成功/部署 READY/环境变量就位」当作验证结论，那些都是必要条件而非充分条件；
+  唯一能证明函数可用的是**真的调用一次端点**。
+- **验证（生产环境实测，非推测）**：
+  - `/api/health` → 200 `{"ok":true,"provider":"qwen","db":true,"quotaConfigured":true}`
+  - `/api/quota` → 200，`limit:100, network_remaining:100`
+  - **真实生成成功**：上传 `test-dresses/dress5.png` → Rose 出图 1024×1024 PNG(~1MB)，
+    耗时 22 秒，配额 100 → 99；渐变裙、金边、蓝蝴蝶结均忠实迁移，Rose 身份保持
+  - 截图存档：`spike-out/live-real-result.png`、`spike-out/live-quota-fixed.png`
+- **踩到的坑（工具层）**：Playwright 的 `page.request.get()` **不走浏览器自身的代理/VPN**，
+  所以用它会误判「站点不可达」。要用 `page.goto()` 走真实浏览器网络栈——
+  此前据此得出「你的浏览器没走 VPN」的结论是错的。
+
+### 2026-10-03 — QUOTA_UNLIMITED_IPS：仅豁免指定网络的每网络上限
+
+- 提交 `33a3379`
+- 背景：用户要「我自己测试不受限、其他人保持 3 次」，而我先做成了对所有人放开（理解偏了），
+  已按原意重做
+- `readQuotaLimits(env, { unlimitedNetwork })` 只抬高「每网络」这一个数字到全局预算为止；
+  **全局上限原样不动，所以豁免不增加当日最坏花费**
+- **精确地址匹配而非网段**：网段匹配会把共享同一出口的陌生人一起豁免
+- `GLOBAL_DAILY_GENERATION_LIMIT=0` 的全局开关对豁免网络同样有效
+- 生产实测：`64.118.152.55` 显示 `100 of 100`（豁免生效），其他人仍为 3
+
 ### 2026-10-03 — 接入 Neon：schema 随部署自动应用
 
 - 提交 `190cdc9`（`vercel.json` 的 `buildCommand` 前置 `npm run db:init`；README 同步）
