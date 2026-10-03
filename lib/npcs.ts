@@ -4,7 +4,7 @@
  *
  * To add or change a customer:
  *  1. Drop the display portrait in  web/public/npcs/<id>.webp   (shown on the card)
- *  2. Drop the reference art in    api/assets/npcs/<id>.webp    (sent to the model)
+ *  2. Drop the reference art in    assets/npcs/<id>.webp    (sent to the model)
  *  3. Fill in `promptNotes` — what helps the model keep this customer looking
  *     like themselves. Only describe what the supplied art actually shows.
  *

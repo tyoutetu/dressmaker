@@ -16,5 +16,5 @@
     "isolatedModules": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src", "../api/lib/npcs.ts"]
+  "include": ["src", "../lib/npcs.ts"]
 }

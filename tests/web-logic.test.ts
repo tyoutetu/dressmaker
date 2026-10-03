@@ -6,8 +6,8 @@ import {
   failureChargeNote,
   generationAllowed,
   quotaBlockCopy,
-} from "../../web/src/lib/outcome";
-import { dataUrlToBlob, prepareResultDownload, resultFilename } from "../../web/src/lib/download";
+} from "../web/src/lib/outcome";
+import { dataUrlToBlob, prepareResultDownload, resultFilename } from "../web/src/lib/download";
 
 /**
  * The browser cannot know the outcome of a request it never finished reading,
@@ -53,7 +53,6 @@ describe("paid-attempt outcome honesty", () => {
 
 describe("generation availability gate", () => {
   const ready = {
-    apiConfigured: true,
     quotaState: "fresh",
     quota: { available: true },
     ready: true,
@@ -64,10 +63,9 @@ describe("generation availability gate", () => {
     assert.equal(generationAllowed(ready), true);
   });
 
-  test("fails closed while checking, stale or unconfigured", () => {
+  test("fails closed while checking, stale or without a snapshot", () => {
     assert.equal(generationAllowed({ ...ready, quotaState: "checking" }), false);
     assert.equal(generationAllowed({ ...ready, quotaState: "stale" }), false);
-    assert.equal(generationAllowed({ ...ready, apiConfigured: false }), false);
     assert.equal(generationAllowed({ ...ready, quota: null }), false);
   });
 

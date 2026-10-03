@@ -1,8 +1,19 @@
 import type { PreparedImage } from "./image";
 import { classifyFetchFailure, countedFromDetails, unreadableOutcome, type CountedState } from "./outcome";
 
+/**
+ * Where `/api` lives.
+ *
+ * An empty value means **same origin**: the static site and its functions are
+ * served by one Vercel project, so relative `/api/*` paths are correct and no
+ * CORS is involved. A non-empty value points at a separately deployed API,
+ * which is what local development uses to reach the mock server on another
+ * port, and what a split frontend/API deployment would need.
+ *
+ * Same-origin is therefore a valid configuration, not a missing one — if the
+ * service is genuinely unreachable, `/api/health` fails and the page says so.
+ */
 const API_BASE = (import.meta.env.VITE_API_BASE ?? "").replace(/\/+$/, "");
-
 /**
  * The client always waits longer than the server's own generation timeout, so a
  * slow-but-successful preview is never killed early from this side.
@@ -60,25 +71,12 @@ export class ApiError extends Error {
   }
 }
 
-export function isApiConfigured(): boolean {
-  return API_BASE.length > 0;
-}
-
-/** Abort signal with a deadline, on browsers that support it. */
 export function timeoutSignal(ms: number): AbortSignal | undefined {
   try {
     return typeof AbortSignal.timeout === "function" ? AbortSignal.timeout(ms) : undefined;
   } catch {
     return undefined;
   }
-}
-
-function configMissing(): ApiError {
-  return new ApiError(
-    "config_missing",
-    "The preview API is not configured for this deployment yet.",
-    0,
-  );
 }
 
 interface ErrorPayload {
@@ -93,7 +91,6 @@ async function readJson<T>(response: Response): Promise<T | null> {
 
 /** GET /api/quota — server truth for today's remaining previews. */
 export async function fetchQuota(signal?: AbortSignal): Promise<{ quota: QuotaSnapshot; mock: boolean }> {
-  if (!API_BASE) throw configMissing();
   let response: Response;
   try {
     response = await fetch(`${API_BASE}/api/quota`, { signal, headers: { accept: "application/json" } });
@@ -114,7 +111,6 @@ export async function fetchQuota(signal?: AbortSignal): Promise<{ quota: QuotaSn
 
 /** GET /api/health — used to flag a local mock deployment in the UI. */
 export async function fetchHealth(signal?: AbortSignal): Promise<HealthResponse> {
-  if (!API_BASE) throw configMissing();
   const response = await fetch(`${API_BASE}/api/health`, {
     signal,
     headers: { accept: "application/json" },
@@ -138,7 +134,6 @@ export interface GenerateOptions {
 
 /** POST /api/generate */
 export async function requestGeneration(options: GenerateOptions): Promise<GenerateResponse> {
-  if (!API_BASE) throw configMissing();
 
   const form = new FormData();
   form.append("npc_id", options.npcId);
@@ -217,7 +212,6 @@ export interface FeedbackPayload {
 
 /** POST /api/feedback — text never leaves this call. */
 export async function sendFeedback(payload: FeedbackPayload): Promise<void> {
-  if (!API_BASE) throw configMissing();
 
   const response = await fetch(`${API_BASE}/api/feedback`, {
     method: "POST",

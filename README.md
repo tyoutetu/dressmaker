@@ -14,23 +14,46 @@ the tool does not show one.
 > that provider handles it under its own policy.
 
 ```
-.
-├── api/                 # Vercel functions + everything the functions need
-│   ├── api/             #   HTTP handlers: generate / quota / feedback / health
-│   ├── lib/             #   npcs, quota, ip, db, providers, validation, prompt
-│   ├── assets/npcs/     #   customer reference art sent to the model
-│   ├── sql/schema.sql   #   Postgres schema + quota reservation function
-│   ├── scripts/         #   local mock, db init, paid-quality spike
-│   └── tests/           #   handler, quota-SQL, provider and mock tests
-└── web/                 # static frontend (Vite + React) deployed to GitHub Pages
-    ├── public/npcs/     #   the same portraits, shown on the picker cards
+.                          # one Vercel project, rooted here
+├── api/                   # HTTP handlers — and *only* handlers
+│   ├── generate.ts        #   everything under api/ becomes a public route
+│   ├── quota.ts
+│   ├── feedback.ts
+│   └── health.ts
+├── lib/                   # shared server code: npcs, quota, ip, db, providers,
+│                          #   validation, prompt, output, body, env, config,
+│                          #   errors, npcAssets
+├── assets/npcs/           # customer reference art sent to the model
+├── sql/schema.sql         # Postgres schema + quota reservation function
+├── scripts/               # local mock, db init, paid-quality spike
+├── tests/                 # handler, quota-SQL, provider, prompt and mock tests
+├── vercel.json            # install/build for the web app + function settings
+└── web/                   # frontend (Vite + React), built to web/dist
+    ├── public/npcs/       #   the same portraits, shown on the picker cards
     └── src/
         ├── lib/qr.ts        #   dependency-free QR encoder for the share card
         └── lib/shareCard.ts #   canvas composition of the shareable PNG
 ```
 
-`api/lib/npcs.ts` is the single source of truth for the customer list; the web
-build re-exports it.
+`lib/npcs.ts` is the single source of truth for the customer list; the web build
+re-exports it.
+
+**Why `lib/` is not inside `api/`.** Vercel turns every file under `api/` into a
+serverless function. With the API root and the site root separated, shared code
+and tests had to live outside the function directory — which is why this project
+started with a nested `api/api/` layout and an `api/` Root Directory. Consolidating
+onto one project makes the conventional layout possible instead: handlers at
+`api/*.ts`, everything they depend on beside them in `lib/`, `assets/`, `tests/`.
+Attempting the same thing with the old nested layout is not a style question — it
+fails the deploy outright:
+
+```
+exceeded_serverless_functions_per_deployment
+No more than 12 Serverless Functions can be added to a Deployment on the Hobby plan.
+```
+
+Because one project serves both halves, the browser calls `/api/*` on its own
+origin: **no CORS, and no `VITE_API_BASE` to configure.**
 
 ---
 
@@ -53,7 +76,7 @@ never by the browser.
 | Reset | 00:00 UTC, shown in the UI in the visitor's own local time |
 
 Reservations are made by `reserve_generation_quota(...)` in
-[`api/sql/schema.sql`](api/sql/schema.sql): one Postgres function takes a
+[`sql/schema.sql`](sql/schema.sql): one Postgres function takes a
 per-day advisory lock and moves the per-network and global counters together,
 so concurrent requests, cold starts and multiple function instances cannot
 overshoot either ceiling. It runs as a single statement through Neon's HTTP
@@ -93,7 +116,7 @@ IP_HASH_SECRET="$(openssl rand -hex 32)"   # >= 16 characters, required on Verce
    Studio (keys start with `sk-`). The two accounts are separate and the keys are
    not interchangeable; see [§5](#5-provider-qwen-image-default). A Gemini /
    OpenAI key works too if you switch providers.
-4. A **GitHub repo** — the frontend deploys to GitHub Pages.
+4. A **GitHub repo** — Vercel deploys from it, and pushes to `main` redeploy.
 5. A **GA4 measurement ID** — optional; the site is fully functional without it.
 
 ---
@@ -101,7 +124,6 @@ IP_HASH_SECRET="$(openssl rand -hex 32)"   # >= 16 characters, required on Verce
 ## 3. Database
 
 ```bash
-cd api
 cp .env.example .env      # set DATABASE_URL
 npm ci
 npm run db:init           # applies sql/schema.sql (idempotent)
@@ -119,20 +141,21 @@ function.
 
 ---
 
-## 4. Deploy the API on Vercel
+## 4. Deploy on Vercel
 
-Set **Root Directory = `api`** and Framework Preset **Other**.
+One project, **Root Directory left at the repository root**, Framework Preset
+**Other**. It serves the static site at `/` and the functions at `/api/*` from the
+same origin, so there is no CORS layer and no API base URL to configure.
 
-The root directory must be `api` for two reasons: files directly inside `api/`
-become HTTP routes (so `lib/`, `scripts/` and `assets/` must stay outside it),
-and the customer config lives in `api/lib/npcs.ts` so the function depends on
-nothing outside its own root — Vercel does not upload files from outside the
-Root Directory. Reference art is bundled explicitly:
+[`vercel.json`](vercel.json) carries the three settings that make that work:
 
 ```json
 {
+  "installCommand": "npm ci && cd web && npm ci",
+  "buildCommand": "cd web && npm run build",
+  "outputDirectory": "web/dist",
   "functions": {
-    "api/**/*.ts": { "maxDuration": 300, "includeFiles": "assets/npcs/**" }
+    "api/*.ts": { "maxDuration": 300, "includeFiles": "assets/npcs/**" }
   }
 }
 ```
@@ -144,7 +167,7 @@ are bounded before parsing (an early `Content-Length` check plus a streaming byt
 ceiling), so an oversized multipart upload is refused before it is buffered.
 
 Environment variables (Production and Preview), matching
-[`api/.env.example`](api/.env.example):
+[`.env.example`](.env.example):
 
 | Variable | Value |
 |---|---|
@@ -156,7 +179,7 @@ Environment variables (Production and Preview), matching
 | `QWEN_IMAGE_MODEL` | default `qwen-image-3.0` |
 | `USER_DAILY_GENERATION_LIMIT` | `3` (may be lowered or set to `0`; values above 3 are rejected) |
 | `GLOBAL_DAILY_GENERATION_LIMIT` | `100` (`0` = kill switch) |
-| `ALLOWED_ORIGINS` | your Pages origin, comma-separated, no trailing slash |
+| `ALLOWED_ORIGINS` | optional, comma-separated. Only needed when the frontend is served from a *different* origin than the API; same-origin requests need no entry |
 
 Optional: `QWEN_PROMPT_EXTEND`, `QWEN_ENABLE_THINKING` (both default to
 `false` — see [§5](#5-provider-qwen-image-default) for why), `GEMINI_API_KEY`,
@@ -260,28 +283,26 @@ endpoint itself must be an `https` host on the allowlist (`.qianwenaiapi.com` or
 client input can override the model, endpoint or key.
 
 `gemini` and `openai` remain available behind the same interface
-(`api/lib/provider.ts`) by setting `AI_PROVIDER`.
+(`lib/provider.ts`) by setting `AI_PROVIDER`.
 
 ---
 
-## 6. Deploy the frontend to GitHub Pages
+## 6. Frontend build variables
 
-1. **Settings → Pages → Build and deployment → Source: GitHub Actions.**
-2. Add repository **variables**: `VITE_API_BASE` = your Vercel API URL,
-   `VITE_SITE_URL` = the public address visitors reach the site on (needed for
-   sharing — see below), and optionally `VITE_GA4_ID`.
-3. Push to `main`. `.github/workflows/deploy-web.yml` runs `npm ci` and builds
-   `web/` with `--base=/<repo>/`.
-4. Point `ALLOWED_ORIGINS` on Vercel at the final Pages origin.
+The frontend is built by the same Vercel project as the API, so its variables
+live in Vercel (Production and Preview), not in the repository:
 
-Asset paths (including the customer portraits) are resolved through Vite's
-`BASE_URL`, so the site works both at `https://<user>.github.io/<repo>/` and at a
-custom domain. For a user/org site (`<user>.github.io`) or a custom domain, set
-the repository variable `VITE_BASE_PATH=/`.
+| Variable | Value |
+|---|---|
+| `VITE_SITE_URL` | the public address visitors reach the site on. The share card's QR code encodes it verbatim, so **when it is unset the share control does not render at all** rather than printing a code that leads nowhere |
+| `VITE_GA4_ID` | optional GA4 measurement ID; analytics stays silent without it |
+| `VITE_API_BASE` | **leave unset.** An empty value means same origin, which is what one project gives you. Set it only when the frontend is served from a different origin than the API |
+| `VITE_BASE_PATH` | only for sub-path hosting. Vercel serves the site at the root, so this is normally unset |
 
-GitHub Pages only serves static files: it cannot hold the API key, the database
-URL or the quota. The static site is safe to publish; every secret stays on
-Vercel.
+GitHub Pages is no longer the deployment target. `.github/workflows/deploy-web.yml`
+still exists and still builds `web/` for Pages, but the site it publishes has no
+API behind it (`*.github.io/api/*` is a 404), so it is a legacy fallback rather
+than a deployment. Delete the workflow once the Vercel deployment is confirmed.
 
 ### The share card
 
@@ -296,12 +317,8 @@ it and make their own preview without being told a URL.
   (byte mode, level M, versions 1–10). The frontend ships exactly two runtime
   packages, and a QR library would have been the largest thing in the bundle for
   a single short, same-origin URL. It adds ~3.9 kB gzipped.
-- `VITE_SITE_URL` is what the QR encodes, verbatim — path included, so a Pages
-  project site's `/<repo>/` works, while query and hash are stripped so the code
-  never carries someone's campaign parameters. **When it is unset or unusable the
-  share control does not render at all**, rather than printing a code that leads
-  nowhere. It has to be the real public address, so set it before sharing the
-  site with anyone.
+- `VITE_SITE_URL` is what the QR encodes, verbatim, with query and hash stripped
+  so the code never carries someone's campaign parameters.
 - On a phone the composed file goes to the system share sheet; on a desktop,
   where there is no share sheet for files, the same control is a real
   `<a download>` link and the browser's own click starts the download.
@@ -317,8 +334,8 @@ it and make their own preview without being told a URL.
 ### Local mock (recommended for review)
 
 ```bash
-cd api && npm ci && npm run mock        # http://localhost:8787
-cd web && VITE_API_BASE=http://localhost:8787 npm run dev
+npm ci && npm run mock                  # http://localhost:8787
+cd web && npm ci && VITE_API_BASE=http://localhost:8787 npm run dev
 ```
 
 The mock implements the same routes and the same quota contract as production,
@@ -331,12 +348,12 @@ review the error states.
 ### Real functions locally
 
 ```bash
-cd api && cp .env.example .env    # fill in DATABASE_URL, IP_HASH_SECRET, DASHSCOPE_API_KEY
+cp .env.example .env              # fill in DATABASE_URL, IP_HASH_SECRET, DASHSCOPE_API_KEY
 npx vercel dev                    # http://localhost:3000
 cd web && VITE_API_BASE=http://localhost:3000 npm run dev
 ```
 
-Set `ALLOW_LOCAL_QUOTA_MODE=true` in `api/.env` so the local quota can resolve an
+Set `ALLOW_LOCAL_QUOTA_MODE=true` in `.env` so the local quota can resolve an
 identity. Local origins (`localhost:5173/4173`) are pre-allowlisted for CORS.
 
 ---
@@ -344,11 +361,10 @@ identity. Local origins (`localhost:5173/4173`) are pre-allowlisted for CORS.
 ## 8. Tests
 
 ```bash
-cd api
 npm run typecheck
 npm test
 
-cd ../web
+cd web
 npm run typecheck
 npm run build
 npm run build -- --base=/dressmaker/    # GitHub Pages sub-path build
@@ -373,7 +389,6 @@ cannot prove a QR scans, which is the one failure the feature cannot survive.
 ### Paid visual-quality spike (not run in CI)
 
 ```bash
-cd api
 npm run spike -- --npc rose ../test-dresses/dress1.png ../test-dresses/dress2.png
 # → ../spike-out/ with a results.csv of latency and estimated cost
 ```

@@ -11,4 +11,4 @@ They are bundled into the serverless function by the `includeFiles` entry in
 `vercel.json` (`assets/npcs/**`) and are not served publicly by the API.
 
 Add a customer by dropping `<id>.webp` here, the matching portrait in
-`web/public/npcs/`, and an entry in `api/lib/npcs.ts` with `enabled: true`.
+`web/public/npcs/`, and an entry in `lib/npcs.ts` with `enabled: true`.
