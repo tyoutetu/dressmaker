@@ -190,6 +190,7 @@ Environment variables (Production and Preview), matching
 | `QWEN_IMAGE_MODEL` | default `qwen-image-3.0` |
 | `USER_DAILY_GENERATION_LIMIT` | `3` (may be lowered or set to `0`; values above 3 are rejected) |
 | `QUOTA_UNLIMITED_IPS` | optional, comma-separated exact addresses exempt from the per-network ceiling. Leave unset and nobody is exempt |
+| `STATS_TOKEN` | optional. Enables `GET /api/stats`. Unset = the route answers 404. Use 16+ characters |
 | `GLOBAL_DAILY_GENERATION_LIMIT` | `100` (`0` = kill switch) |
 | `ALLOWED_ORIGINS` | optional, comma-separated. Only needed when the frontend is served from a *different* origin than the API; same-origin requests need no entry |
 
