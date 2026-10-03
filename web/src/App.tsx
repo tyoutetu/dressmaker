@@ -20,7 +20,6 @@ import {
   GENERATION_TIMEOUT_MS,
   fetchHealth,
   fetchQuota,
-  isApiConfigured,
   requestGeneration,
   timeoutSignal,
   type GenerateResponse,
@@ -63,7 +62,6 @@ export default function App() {
   const attemptRef = useRef(0);
 
   const busy = phase === "preparing" || phase === "generating";
-  const apiConfigured = isApiConfigured();
   // Resolved once: the share card's QR code encodes exactly this address, and a
   // missing/unusable value hides sharing rather than printing a dead code.
   const siteUrl = normalizeSiteUrl(import.meta.env.VITE_SITE_URL);
@@ -71,10 +69,6 @@ export default function App() {
   // ---------------------------------------------------------------- quota ----
 
   const refreshQuota = useCallback(async () => {
-    if (!isApiConfigured()) {
-      setQuotaState("stale");
-      return;
-    }
     try {
       const { quota: next, mock } = await fetchQuota(timeoutSignal(12_000));
       setQuota(next);
@@ -203,7 +197,7 @@ export default function App() {
   const quotaBlocks = quotaState === "fresh" && Boolean(quota && !quota.available);
   const blockedVariant = failure?.variant ?? (quotaBlocks ? quota?.variant : undefined);
   const ready = Boolean(selectedNpc && prepared);
-  const canGenerate = generationAllowed({ apiConfigured, quotaState, quota, ready, busy });
+  const canGenerate = generationAllowed({ quotaState, quota, ready, busy });
   const dailyAllowance = quota && quota.limit > 0 ? quota.limit : 3;
 
   const blockedCopy = blockedVariant && blockedVariant !== "ok" ? quotaBlockCopy(blockedVariant) : null;
@@ -329,25 +323,20 @@ export default function App() {
         </p>
       )}
 
-      {(!apiConfigured || quotaState === "stale") && (
+      {/* This banner can only be on screen in the `stale` state, so the button
+          never needs a "checking" label: clicking it moves the state to
+          `checking`, which removes the banner, and it comes back if the read
+          fails again. */}
+      {quotaState === "stale" && (
         <p className="banner banner-warn" role="alert">
           <IconAlert width={18} height={18} />
           <span>
-            <strong>Previews are unavailable right now.</strong>{" "}
-            {apiConfigured
-              ? "We could not read today's preview limit, so new previews are paused until it loads again."
-              : "This page cannot reach the preview service at the moment."}
+            <strong>Previews are unavailable right now.</strong> We could not read today's preview
+            limit, so new previews are paused until it loads again.
           </span>
-          {apiConfigured && (
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={retryQuota}
-              disabled={quotaState === "checking"}
-            >
-              {quotaState === "checking" ? "Checking…" : "Check availability"}
-            </button>
-          )}
+          <button type="button" className="btn btn-secondary btn-sm" onClick={retryQuota}>
+            Check availability
+          </button>
         </p>
       )}
 

@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - "web/**"
-      - "api/lib/npcs.ts" # the customer list lives with the API; the web build reads it
+      - "lib/npcs.ts" # the customer list lives with the API; the web build reads it
       - ".github/workflows/deploy-web.yml"
   workflow_dispatch:
 

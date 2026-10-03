@@ -72,8 +72,6 @@ export function unreadableOutcome(): { code: "unknown"; counted: CountedState; m
 export type QuotaState = "checking" | "fresh" | "stale";
 
 export interface AvailabilityInput {
-  /** False when this build has no API origin configured at all. */
-  apiConfigured: boolean;
   /** `fresh` only after a successful, authoritative quota read. */
   quotaState: QuotaState;
   /** Last known snapshot, kept for display even when the read has gone stale. */
@@ -84,13 +82,17 @@ export interface AvailabilityInput {
 }
 
 /**
- * The single gate for starting a paid attempt. It fails closed: an unconfigured
- * API or a stale/unavailable quota answer disables generation until a refresh
- * succeeds, even though the last known numbers may still be on screen.
+ * The single gate for starting a paid attempt. It fails closed: a stale or
+ * unavailable quota answer disables generation until a refresh succeeds, even
+ * though the last known numbers may still be on screen.
+ *
+ * There is deliberately no "is the API configured" input. With the site and its
+ * functions served by one project the API base may legitimately be empty (same
+ * origin), and reachability is already answered by whether the quota read came
+ * back `fresh`.
  */
 export function generationAllowed(input: AvailabilityInput): boolean {
   return (
-    input.apiConfigured &&
     input.quotaState === "fresh" &&
     Boolean(input.quota?.available) &&
     input.ready &&

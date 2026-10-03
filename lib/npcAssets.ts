@@ -5,16 +5,21 @@ import { ApiError } from "./errors";
 import type { ImageInput } from "./provider";
 
 /**
- * Customer reference art lives in api/assets/npcs/ and is bundled into the
- * function through the `includeFiles` entry in vercel.json.
+ * Customer reference art lives in `assets/npcs/` at the project root and is
+ * bundled into the function through the `includeFiles` entry in vercel.json.
+ * It is deliberately outside `api/`: everything under `api/` becomes a public
+ * HTTP route, and this art must not be served.
  *
  * The shipped art is WebP; every provider gets a uniform PNG with a correct
  * MIME type instead of a byte buffer the model has to guess at.
  */
 export async function loadNpcReference(referencePath: string): Promise<ImageInput> {
   const candidates = [
+    // The normal case: a function's cwd is the project root, and the spike and
+    // mock scripts run from there too.
     path.resolve(process.cwd(), referencePath),
-    path.resolve(process.cwd(), "api", referencePath),
+    // Running from web/ still resolves the bundled art one level up.
+    path.resolve(process.cwd(), "..", referencePath),
   ];
 
   let raw: Buffer | null = null;
