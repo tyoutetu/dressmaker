@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import {
+  isUnlimitedNetwork,
   readNonNegativeDecimal,
   readQuotaLimits,
   USER_DAILY_GENERATION_LIMIT_MAX,
@@ -9,25 +10,15 @@ import { ApiError } from "../lib/errors";
 import { estimatedCost } from "../lib/provider";
 
 describe("per-network limit configuration", () => {
-  test("defaults to the sanity ceiling and allows lowering or zero", () => {
-    assert.equal(USER_DAILY_GENERATION_LIMIT_MAX, 100);
-    assert.deepEqual(readQuotaLimits({}), { userLimit: 100, globalLimit: 100 });
+  test("defaults to the product maximum and allows lowering or zero", () => {
+    assert.equal(USER_DAILY_GENERATION_LIMIT_MAX, 3);
+    assert.deepEqual(readQuotaLimits({}), { userLimit: 3, globalLimit: 100 });
     assert.equal(readQuotaLimits({ USER_DAILY_GENERATION_LIMIT: "2" }).userLimit, 2);
     assert.equal(readQuotaLimits({ USER_DAILY_GENERATION_LIMIT: "0" }).userLimit, 0);
   });
 
-  test("accepts a per-network limit up to the ceiling, so it can stop binding", () => {
-    assert.equal(readQuotaLimits({ USER_DAILY_GENERATION_LIMIT: "100" }).userLimit, 100);
-    // Raising this cannot raise the daily spend: the global ceiling is what
-    // bounds cost, and it is read separately.
-    assert.deepEqual(readQuotaLimits({ USER_DAILY_GENERATION_LIMIT: "100" }), {
-      userLimit: 100,
-      globalLimit: 100,
-    });
-  });
-
-  test("fails closed when an operator mistypes it above the ceiling", () => {
-    for (const value of ["101", "1000", "99999"]) {
+  test("fails closed when an operator tries to raise the ceiling for everyone", () => {
+    for (const value of ["4", "10", "1000"]) {
       assert.throws(
         () => readQuotaLimits({ USER_DAILY_GENERATION_LIMIT: value }),
         (err: unknown) => err instanceof ApiError && err.code === "service_unavailable",
@@ -38,6 +29,42 @@ describe("per-network limit configuration", () => {
 
   test("still fails closed on a malformed value", () => {
     assert.throws(() => readQuotaLimits({ USER_DAILY_GENERATION_LIMIT: "three" }));
+  });
+});
+
+describe("unlimited networks", () => {
+  const env = { QUOTA_UNLIMITED_IPS: "203.0.113.7, 198.51.100.9" };
+
+  test("matches exact addresses only, and ignores surrounding whitespace", () => {
+    assert.equal(isUnlimitedNetwork("203.0.113.7", env), true);
+    assert.equal(isUnlimitedNetwork("198.51.100.9", env), true);
+    // A neighbouring address in the same subnet must NOT be exempt: that is how
+    // a shared VPN exit would hand the exemption to strangers.
+    assert.equal(isUnlimitedNetwork("203.0.113.8", env), false);
+    assert.equal(isUnlimitedNetwork("203.0.113.0", env), false);
+    assert.equal(isUnlimitedNetwork("", env), false);
+  });
+
+  test("nobody is exempt when the list is empty or missing", () => {
+    assert.equal(isUnlimitedNetwork("203.0.113.7", {}), false);
+    assert.equal(isUnlimitedNetwork("203.0.113.7", { QUOTA_UNLIMITED_IPS: "" }), false);
+    assert.equal(isUnlimitedNetwork("203.0.113.7", { QUOTA_UNLIMITED_IPS: "  ,  " }), false);
+  });
+
+  test("raises only the per-network figure, never the global budget", () => {
+    const plain = readQuotaLimits({ GLOBAL_DAILY_GENERATION_LIMIT: "100" });
+    const exempt = readQuotaLimits({ GLOBAL_DAILY_GENERATION_LIMIT: "100" }, { unlimitedNetwork: true });
+    assert.deepEqual(plain, { userLimit: 3, globalLimit: 100 });
+    assert.deepEqual(exempt, { userLimit: 100, globalLimit: 100 });
+    // The whole point: the exemption cannot raise the day's worst-case spend.
+    assert.equal(exempt.globalLimit, plain.globalLimit);
+  });
+
+  test("the kill switch still wins for an exempt network", () => {
+    assert.deepEqual(
+      readQuotaLimits({ GLOBAL_DAILY_GENERATION_LIMIT: "0" }, { unlimitedNetwork: true }),
+      { userLimit: 0, globalLimit: 0 },
+    );
   });
 });
 

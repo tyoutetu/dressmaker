@@ -30,26 +30,69 @@ export interface QuotaLimits {
 }
 
 /**
- * Sanity ceiling for the per-network limit. `USER_DAILY_GENERATION_LIMIT` may be
- * anything from 0 up to this; a larger value is treated as a typo and fails
- * closed rather than quietly handing out more paid attempts than intended.
+ * Absolute product maximum for the per-network ceiling. `USER_DAILY_GENERATION_LIMIT`
+ * may lower this or set it to zero, but an operator can never raise it: a value
+ * above the product maximum is a mistake and fails closed instead of quietly
+ * handing out more paid attempts than the product allows.
  *
- * This is deliberately **not** the product's cost ceiling. The ceiling is
- * `GLOBAL_DAILY_GENERATION_LIMIT`, which caps spend across every network
- * together; the per-network limit only decides how that shared budget is shared
- * out. Raising it therefore cannot increase the worst-case daily spend — it
- * only lets one network consume more of the budget that already exists. Setting
- * the per-network limit at or above the global one makes it non-binding, which
- * is what a single-operator deployment wants.
+ * Networks listed in `QUOTA_UNLIMITED_IPS` are exempt from this ceiling — see
+ * `isUnlimitedNetwork`. That exemption is per-network and never lifts the global
+ * budget, so it cannot raise the day's worst-case spend.
  */
-export const USER_DAILY_GENERATION_LIMIT_MAX = 100;
+export const USER_DAILY_GENERATION_LIMIT_MAX = 3;
+
+/**
+ * Networks that skip the per-network daily ceiling.
+ *
+ * This exists for the operator testing their own deployment: everyone else keeps
+ * the product's three-a-day ceiling, while the listed addresses are limited only
+ * by the global budget. Costs stay bounded because the global ceiling still
+ * applies — an exempt network can consume the shared budget, not exceed it.
+ *
+ * Matching is on the exact canonical address, deliberately: a prefix or range
+ * match would silently exempt strangers who happen to share a subnet, and a
+ * shared VPN exit is exactly where that goes wrong.
+ *
+ * The addresses live in server configuration, are never written to the database
+ * and are never logged; only their HMAC reaches the quota tables, as for every
+ * other visitor.
+ */
+export function readUnlimitedNetworks(env: Env = process.env): string[] {
+  return (env.QUOTA_UNLIMITED_IPS ?? "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}
+
+/** True when this network is exempt from the per-network ceiling. */
+export function isUnlimitedNetwork(ip: string, env: Env = process.env): boolean {
+  const list = readUnlimitedNetworks(env);
+  return list.length > 0 && list.includes(ip);
+}
 
 /**
  * Read the daily cost ceilings. A malformed value fails closed instead of
  * silently widening the limit. `GLOBAL_DAILY_GENERATION_LIMIT=0` is a
  * deliberate kill switch that disables all paid generation.
+ *
+ * `unlimitedNetwork` raises only the *per-network* figure — to the global
+ * budget, so an exempt network may use the whole day's allowance without the
+ * per-network check ever binding first. The global figure is unchanged, which is
+ * what keeps the exemption cost-neutral. When the global limit is 0 the kill
+ * switch still wins and the exempt network is disabled along with everyone else.
  */
-export function readQuotaLimits(env: Env = process.env): QuotaLimits {
+export function readQuotaLimits(
+  env: Env = process.env,
+  options: { unlimitedNetwork?: boolean } = {},
+): QuotaLimits {
+  const globalLimit = readNonNegativeInt(env, "GLOBAL_DAILY_GENERATION_LIMIT", 100);
+  const userLimit = options.unlimitedNetwork
+    ? globalLimit
+    : readConfiguredUserLimit(env, globalLimit);
+  return { userLimit, globalLimit };
+}
+
+function readConfiguredUserLimit(env: Env, globalLimit: number): number {
   const userLimit = readNonNegativeInt(env, "USER_DAILY_GENERATION_LIMIT", USER_DAILY_GENERATION_LIMIT_MAX);
   if (userLimit > USER_DAILY_GENERATION_LIMIT_MAX) {
     throw new ApiError(
@@ -58,10 +101,7 @@ export function readQuotaLimits(env: Env = process.env): QuotaLimits {
       `USER_DAILY_GENERATION_LIMIT must be between 0 and ${USER_DAILY_GENERATION_LIMIT_MAX}; got ${userLimit}.`,
     );
   }
-  return {
-    userLimit,
-    globalLimit: readNonNegativeInt(env, "GLOBAL_DAILY_GENERATION_LIMIT", 100),
-  };
+  return userLimit;
 }
 
 function readNonNegativeInt(env: Env, key: string, fallback: number): number {

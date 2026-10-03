@@ -6,6 +6,7 @@ import { readBoundedFormData, requestBodyLimitBytes } from "../lib/body";
 import { hashIp, resolveClientIp } from "../lib/ip";
 import {
   isLocalQuotaMode,
+  isUnlimitedNetwork,
   isVercelRuntime,
   readIpHashSecret,
   readPositiveInt,
@@ -90,7 +91,12 @@ export async function route(request: Request): Promise<Response> {
     }
     const ipHash = hashIp(identity.ip.canonical, readIpHashSecret());
 
-    limits = readQuotaLimits();
+    // Configuration and validation both run before the reservation. A network in
+    // QUOTA_UNLIMITED_IPS skips the per-network ceiling but still spends from the
+    // shared global budget, so the day's worst-case cost is unchanged.
+    limits = readQuotaLimits(process.env, {
+      unlimitedNetwork: isUnlimitedNetwork(identity.ip.canonical),
+    });
     // Config and validation both run before the reservation: a misconfigured
     // deployment or an unusable upload costs nothing.
     const provider = getProvider();

@@ -2,7 +2,13 @@ import { USER_MESSAGES, ApiError } from "../lib/errors";
 import { corsHeaders, errorResponse, isOriginAllowed, json } from "../lib/env";
 import { getDb, readQuotaCounters } from "../lib/db";
 import { hashIp, resolveClientIp } from "../lib/ip";
-import { isLocalQuotaMode, isVercelRuntime, readIpHashSecret, readQuotaLimits } from "../lib/config";
+import {
+  isLocalQuotaMode,
+  isUnlimitedNetwork,
+  isVercelRuntime,
+  readIpHashSecret,
+  readQuotaLimits,
+} from "../lib/config";
 import { buildQuotaSnapshot, utcDayKey } from "../lib/quota";
 import { DEFAULT_PROVIDER } from "../lib/provider";
 
@@ -40,7 +46,12 @@ export async function route(request: Request): Promise<Response> {
       throw new ApiError("quota_unavailable", 503, "Trusted client identity unavailable.");
     }
 
-    const limits = readQuotaLimits();
+    // Read-only, so it must report the same numbers the reservation would honour:
+    // an exempt network sees the whole global budget rather than the product's
+    // three-a-day ceiling.
+    const limits = readQuotaLimits(process.env, {
+      unlimitedNetwork: isUnlimitedNetwork(identity.ip.canonical),
+    });
     const ipHash = hashIp(identity.ip.canonical, readIpHashSecret());
     const db = getDb();
     const counters = await readQuotaCounters(db, ipHash, utcDayKey());
