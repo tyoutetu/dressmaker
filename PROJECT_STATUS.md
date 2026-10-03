@@ -20,7 +20,7 @@ README 定位原文要点：
 - API：Vercel Functions（TypeScript / ESM），依赖 `@neondatabase/serverless`、`openai`、
   `@google/genai`、`sharp`；数据库 Postgres（Neon），额度预留由
   `reserve_generation_quota(...)` 单条 SQL 完成
-- 前端：Vite + React 19 静态站点，部署到 GitHub Pages
+- 前端：Vite + React 19 静态站点，由同一个 Vercel 项目构建并托管（`web/dist`）
 
 仓库：`git@github.com:tyoutetu/dressmaker.git`
 
@@ -28,14 +28,14 @@ README 定位原文要点：
 
 | 目录 | 分工 |
 |---|---|
-| `api/` | Vercel functions 及函数所需的一切 |
-| `api/api/` | HTTP handlers：`generate.ts` / `quota.ts` / `feedback.ts` / `health.ts` |
-| `api/lib/` | `npcs` / `quota` / `ip` / `db` / `providers` / `validation` / `prompt` / `output` / `body` / `env` / `config` / `errors` / `npcAssets` |
-| `api/assets/npcs/` | 发给模型的顾客参考图（`rose.webp`、`priya.webp`） |
-| `api/sql/schema.sql` | Postgres schema + 额度预留函数 |
-| `api/scripts/` | 本地 mock、db 初始化、付费质量 spike（`mock-server.ts` / `db-init.ts` / `spike.ts`） |
-| `api/tests/` | handler、配额 SQL、provider、mock 测试（14 个 `*.test.ts`） |
-| `web/` | 静态前端（Vite + React），部署到 GitHub Pages |
+| `api/` | **只有 4 个 handler**（`generate` / `quota` / `feedback` / `health`）—— Vercel 只把这里的文件变成函数 |
+| `lib/` | 共享服务端代码：`npcs` / `quota` / `ip` / `db` / `providers` / `validation` / `prompt` / `output` / `body` / `env` / `config` / `errors` / `npcAssets` |
+| `assets/npcs/` | 发给模型的顾客参考图（`rose.webp`、`priya.webp`），在 `api/` 之外所以不会被公开 |
+| `sql/schema.sql` | Postgres schema + 额度预留函数 |
+| `scripts/` | 本地 mock、db 初始化、付费质量 spike（`mock-server.ts` / `db-init.ts` / `spike.ts`） |
+| `tests/` | handler、配额 SQL、provider、prompt、来源校验测试（15 个 `*.test.ts`） |
+| `vercel.json` | 单项目配置：installCommand / buildCommand / outputDirectory / functions |
+| `web/` | 前端（Vite + React），构建到 `web/dist`，与 API 同项目同源 |
 | `web/public/npcs/` | 顾客选择卡片上显示的同一批立绘 |
 | `web/src/lib/qr.ts` | 无依赖 QR 编码器（分享卡用，byte 模式、level M、版本 1–10） |
 | `web/src/lib/shareCard.ts` | canvas 合成可分享 PNG |
@@ -43,11 +43,56 @@ README 定位原文要点：
 | `spike-out/` | 付费 spike 输出（已 gitignore） |
 | `test-dresses/` | 付费 spike 的本地输入素材（已 gitignore） |
 
-`api/lib/npcs.ts` 是顾客列表的唯一事实来源，web 构建再导出它。
+`lib/npcs.ts` 是顾客列表的唯一事实来源，web 构建再导出它。
 
 ## 最近完成
 
 倒序。**建档时未运行任何构建/测试**，故区分「建档实测」与「仓库内既有证据」。
+
+### 2026-10-03 — 部署架构迁移：GitHub Pages + Vercel 双项目 → Vercel 单项目
+
+- 提交 `4acf8e8`（重构）、`ea97f5a`（合并）、`8b6e26c`（来源校验修复）
+- **动机**：前后端本就都需要 Vercel，分两个平台还要额外维护 CORS 与 API 地址配置。
+  单项目同源可彻底去掉这两样。用户明确要求「一个项目」。
+- **根因（实测，非推测）**：Vercel 会把项目根 `api/` 下**每个** `.ts` 变成函数。
+  旧布局（`api/api` + `api/lib` + `api/scripts` + `api/tests`）在根目录下产生
+  **37 个函数**，直接顶爆 Hobby 版上限——实测部署报错原文：
+  ```
+  exceeded_serverless_functions_per_deployment
+  No more than 12 Serverless Functions can be added to a Deployment on the Hobby plan.
+  ```
+  构建日志里 `Using TypeScript` 恰好出现 37 次。**这就是当初 Root Directory 必须设 `api` 的原因。**
+- **新布局**（常规 Vercel 单项目）：
+  | 路径 | 内容 |
+  |---|---|
+  | `api/*.ts` | 4 个 handler（= 4 个函数，唯一会变函数的地方） |
+  | `lib/` | 共享代码（函数目录之外） |
+  | `assets/npcs/` | 参考图 |
+  | `sql/` `scripts/` `tests/` | schema、本地脚本、测试 |
+  | `web/` | 前端，构建到 `web/dist` |
+  | `vercel.json` | installCommand / buildCommand / outputDirectory / functions |
+- **改动要点**：全部用 `git mv` 整体位移，故 handler 与测试里的 `../lib/...` 相对路径
+  **无需改动**；实际只影响 4 行跨目录引用（`tests/{web-logic,qr-share}.test.ts` 的
+  `../../web` → `../web`）、`web/src/npcs.ts` 与 `web/tsconfig.json` 指向的
+  `lib/npcs.ts`。**`web/src/npcs.ts` 那处是构建时才暴露的**——说明搬完必须真跑构建。
+- **API base 语义变更**：空 `VITE_API_BASE` 现在表示**同源**而非「未配置」。
+  移除了 `isApiConfigured` 与 5 处 `config_missing` 守卫（同源下那是冗余门控，
+  可达性由 `/api/health` 与 quota 是否 `fresh` 回答）。
+- **同源带来的一个必要修复**：`isOriginAllowed` 原先在 `ALLOWED_ORIGINS` 为空时
+  拒绝一切浏览器来源，而**同源 POST 同样会带 `Origin` 头** → 不修则部署后每个生成请求 403。
+  现在 `lib/env.ts` 通过 Vercel 系统变量 `VERCEL_PROJECT_PRODUCTION_URL` / `VERCEL_URL`
+  自动接受自身部署域名（含 preview）。新增 `tests/env.test.ts` 7 条覆盖。
+- **Vercel 侧**：新建项目 `dressmaker`（`prj_1FEUfj463svOURMBTgFNSpgeqRuN`，
+  **root = 仓库根**），连接 GitHub `tyoutetu/dressmaker` @ `main`，写入 9 个环境变量；
+  **旧项目 `dressmaker-api` 已删除**。
+- **生产域名**：`https://dressmaker-rouge.vercel.app`
+  ⚠️ `dressmaker.vercel.app` **已被他人占用**，Vercel 自动分配了 `-rouge` 后缀。
+  该地址已写入 `VITE_SITE_URL`（分享二维码指向它）。
+- **验证**：151 项测试全过（原 144）、根类型检查通过、前端构建通过、
+  mock 能从新根启动、部署 `READY`、构建日志确认**函数数 = 4**、前端 `dist/` 产物已生成、
+  9 个环境变量逐条核对。
+- ⚠️ **仍无法从国内做端到端验证**：`dressmaker-rouge.vercel.app` 实测 `http=000`，
+  对照组 `tyoutetu.github.io/dressmaker/` 为 **200**。详见下方「已知问题」。
 
 ### 2026-10-03 — 部署：Vercel API 项目已建并成功部署（但国内不可达）
 
@@ -158,61 +203,65 @@ README 定位原文要点：
 
 ## 下一步
 
-1. **建 Neon 数据库**（只能网页做）→ Vercel 控制台 → 项目 `dressmaker-api` →
-   Storage → Create Database → Neon（免费档）。建完 Vercel 自动注入 `DATABASE_URL`，
-   然后跑 `npm run db:init` 建表并重新部署。
-2. **接上前后端**：设 GitHub 仓库变量 `VITE_API_BASE=https://dressmaker-api.vercel.app`；
-   设 Vercel `ALLOWED_ORIGINS=https://tyoutetu.github.io`（若前端也迁到 Vercel 则改成对应源）。
-3. **端到端验证** —— ⚠️ 当前网络无法访问 `*.vercel.app`，需在有访问能力的环境确认。
-4. **dress1 无袖挂脖款**：三轮 prompt 层手段已用尽，剩下结构性方案
+1. **建 Neon 数据库**（只能网页做，是当前唯一挡着「能用」的一步）：
+   Vercel 控制台 → 项目 `dressmaker` → **Storage** → **Create Database** → **Neon**（免费档）。
+   建完 Vercel 自动注入 `DATABASE_URL`，然后 `npm run db:init` 建表并重新部署。
+2. **端到端验证** —— ⚠️ 当前网络无法访问 `*.vercel.app`，需用户在有访问能力的环境确认：
+   打开 `https://dressmaker-rouge.vercel.app/`，确认 `/api/health` 返回 `ok:true` 且 `db:true`，
+   并真的生成一张图。
+3. **dress1 无袖挂脖款**：三轮 prompt 层手段已用尽，剩下结构性方案
    （调换图片顺序 / 预处理参考图弱化衣物区域），尚未开工。
-5. **读取 provider 的真实计量**：adapter 尚未读 `usage.input_image_count` / `input_image_type` /
+4. **配饰渗透**：dress1 / dress3 领口出现 Rose 默认形象的金色领结，尚未处理。
+5. **读 provider 的真实计量**：adapter 尚未读 `usage.input_image_count` / `input_image_type` /
    `output_image_type`；`estimated_cost` 目前只是运营估算
    （¥0.22/张 = 输入 ¥0.02×2 + 输出 ¥0.18，1024×1024 落在 1k 计费档）。
-6. 上传内容假定为游戏截图（README 明示 UI 只索取游戏截图，但模型仍可能拒绝或给出差结果）。
+6. **决定 GitHub Pages 工作流的去留**：`.github/workflows/deploy-web.yml` 仍在，
+   每次 push 都会往 Pages 发一份没有 API 的前端。迁移完成后建议删除
+   （本轮未删，避免在 Vercel 未验证前拆掉退路）。
+7. **GA4 埋点仍不产生数据**：Vercel 项目未设 `VITE_GA4_ID`（需在 Vercel 环境变量里配）。
+8. 上传内容假定为游戏截图（README 明示 UI 只索取游戏截图，但模型仍可能拒绝或给出差结果）。
 
 ## 是否已上线
 
-**部分上线：前端已上线且可访问；API 已部署但当前网络不可达，且尚未接数据库。**
+**已部署上线（单项目），但尚不能生成图片，且当前网络无法验证。**
 
-- **前端 Production URL：https://tyoutetu.github.io/dressmaker/**
-  - **2026-10-03 复测：HTTP 200**（浏览器通道同样 200），`<title>` 与 README 一致
-- **API Production URL：https://dressmaker-api.vercel.app**（2026-10-03 新建）
-  - 部署状态 **READY**（Vercel API 查询），构建日志正常
-  - ⚠️ **从当前网络不可达**（GFW 阻断 `*.vercel.app`，详见「最近完成」）
-  - ⚠️ **无 `DATABASE_URL`** → 即使可达，`/api/generate` 与 `/api/quota` 也会 fail-closed 返回 503
-  - **端到端能否生成：未验证（当前网络无法验证）**
-- 两处仍未接上：GitHub 仓库变量 `VITE_API_BASE` 未设置（前端仍指向空 base）；
-  Vercel API 的 `ALLOWED_ORIGINS` 未设置
-- 使用须知（README §6）：GitHub Pages 不能保存 API key、数据库 URL 或配额，所有密钥都留在 Vercel
+- **Production URL（唯一入口）：https://dressmaker-rouge.vercel.app**
+  - Vercel 项目 `dressmaker`（`prj_1FEUfj463svOURMBTgFNSpgeqRuN`），**root = 仓库根**
+  - 前端 `/` 与 API `/api/*` 同源同项目；部署 `READY`，函数数 = 4，前端 `dist/` 已产出
+  - ⚠️ **从当前网络不可达**，实测 `http=000`（GFW 阻断 `*.vercel.app`，详见「最近完成」）
+- **旧入口（legacy）**：https://tyoutetu.github.io/dressmaker/ —— **实测 HTTP 200**（可访问）。
+  但它是 GitHub Pages 静态托管，`*.github.io/api/*` 是 404，**无法生成**；
+  且前端已改为默认同源，Pages 上不再有可用 API。
+- ⚠️ **无 `DATABASE_URL`** → 即使可达，`/api/generate` 与 `/api/quota` 也会 fail-closed 返回 503。
+  **这是当前唯一挡住「能用」的硬缺口。**
+- 端到端能否生成：**未验证**（当前网络无法访问该域名，需用户在有访问能力的环境确认）
+- 已删除：旧项目 `dressmaker-api`（双项目方案已废弃）
 
 ## 已知问题 / 待确认
 
-1. **线上前端仍跑不通**：线上 JS 的 API base 是空串，`/api/*` 在 Pages 上是 404 ——
-   站点看起来上线了，实际无法生成。**修法已明确**：设 GitHub 仓库变量
-   `VITE_API_BASE=https://dressmaker-api.vercel.app` 重跑 workflow（`ALLOWED_ORIGINS`
-   也要同步设成 Pages 源）。**但设完之后端到端能否跑通，在当前网络无法验证。**
-2. **`*.vercel.app` 国内不可达**：若要让国内可访问（或让用户本人无须 VPN 就能自测），
-   必须给 API 挂自定义域名。用户 2026-10-03 明确表示「不打算给国内的人看」，
-   故此项**暂不处理**，但需知道：用户本人自测也需要能访问该域名的手段。
-3. **dress1（无袖挂脖）保真度未解决**：三轮 prompt 层手段用尽，剩下的是结构性方案
-   （调换图片顺序 / 预处理参考图弱化衣物区域），尚未开工。
-4. **配饰渗透**：dress1 / dress3 领口出现 Rose 默认形象的金色领结，尚未处理。
-5. **`shared/` 是真·空目录**（2026-10-03 核实：`git ls-files shared` 为 0 条，
-   git 不跟踪空目录，所以它根本不在仓库里，只是本地残留）→ 可以直接删。
-6. **GA4 埋点已上线但不产生数据**：GitHub 仓库未设 `VITE_GA4_ID`，`track()` 静默返回。
-   要生效需在仓库 Variables 里配置并重跑 workflow。
-7. `.gitignore` 有 6 行未提交改动（新增 `.vercel-token` 忽略规则）；`PROJECT_STATUS.md`
-   本身也未加入 git。两者已于 2026-10-03 一并提交，见下次更新记录。
-8. **`.vercel-token` 是敏感文件**：60 字节、权限 0600、已 gitignore。用户 2026-10-03
-   创建时设了 1 天有效期；**用完需删除本地文件并在 Vercel 撤销该 token**。
+1. **缺 `DATABASE_URL`**：唯一挡着「能用」的缺口。Neon 库必须由用户在 Vercel 网页创建
+   （CLI 的 `storage create` 只支持 blob/global-config，`integration resource` 没有 create）。
+2. **`*.vercel.app` 国内不可达**：实测 DNS 污染（本地解析到 Facebook IP 段、
+   8.8.8.8 也给出错误 IP）+ SNI 层连接重置 + 浏览器通道超时。
+   用户 2026-10-03 明确表示「不打算给国内的人看」，故**暂不挂自定义域名**；
+   但需知道：**用户本人自测也需要能访问该域名的手段**。
+3. **端到端未验证**：因上一条，agent 无法从本机验证线上是否真能生成。
+   已验证的只有：构建成功、函数数 = 4、环境变量就位、部署 READY。
+4. **dress1（无袖挂脖）保真度未解决**：三轮 prompt 层手段用尽，剩结构性方案。
+5. **配饰渗透**：dress1 / dress3 领口出现 Rose 默认形象的金色领结。
+6. **`shared/` 是真·空目录**（`git ls-files shared` 为 0 条，git 不跟踪空目录，
+   它根本不在仓库里，只是本地残留）→ 可以直接删。
+7. **GitHub Pages 工作流仍会发布**：`.github/workflows/deploy-web.yml` 每次 push 都往 Pages
+   发一份没有 API 的前端。本轮**刻意保留**作为退路，Vercel 验证通过后应删除。
+8. **GA4 埋点不产生数据**：Vercel 项目未设 `VITE_GA4_ID`，`track()` 静默返回。
+9. **`.vercel-token` 是敏感文件**：用户设了 1 天有效期；**用完需删文件 + 在 Vercel 撤销**。
 
 ## 敏感信息
 
 - `dressmaker/.vercel-token`（60 字节，权限 0600，**已 gitignore**）——
   Vercel Personal Access Token，用户 2026-10-03 创建时设了 **1 天有效期**。
   **用完需删除本地文件 + 在 https://vercel.com/account/tokens 撤销。**
-- `dressmaker/api/.env`（1688 字节，权限 0600，**已 gitignore**）——
+- `dressmaker/.env`（1688 字节，权限 0600，**已 gitignore**；本轮随重构从 `api/.env` 移到根目录）——
   含真实 `DASHSCOPE_API_KEY`（千问AI平台，`sk-ws-` 开头）
 
 **两者都已被 gitignore，未进入 git。**
@@ -221,5 +270,6 @@ Vercel token 同样于 2026-10-03 出现在对话记录中，故「用完即撤�
 
 ## Last Updated
 
-2026-10-03（补档：Vercel API 项目已建并部署 READY；spike 三轮保真度结论 4/5；
-`*.vercel.app` 国内不可达已实测确认；`shared/` 核实为空目录；.gitignore 与本文档已提交）
+2026-10-03（部署架构迁移完成：单 Vercel 项目 `dressmaker` 上线，
+生产域名 `dressmaker-rouge.vercel.app`；旧 `dressmaker-api` 项目已删；
+函数数由 37 降至 4；151 项测试通过；仍缺 `DATABASE_URL`，且当前网络无法验证端到端）
