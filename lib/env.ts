@@ -21,6 +21,27 @@ const LOCAL_ORIGINS = [
   "http://127.0.0.1:3000",
 ];
 
+/**
+ * Origins that are this very deployment.
+ *
+ * With the site and its functions served by one Vercel project, a browser POST
+ * still carries an `Origin` header, and that origin is the deployment's own host.
+ * Refusing it would break the arrangement this project is built around, and
+ * requiring an operator to list their own domain by hand is a footgun: forget
+ * the variable and every generation 403s.
+ *
+ * Vercel exposes the hostnames as system environment variables, so this covers
+ * the production alias and every preview deployment without anyone configuring
+ * anything. Allowing your own origin is not a loosening — a browser cannot forge
+ * the Origin of a cross-site request.
+ */
+function ownOrigins(): string[] {
+  return [process.env.VERCEL_PROJECT_PRODUCTION_URL, process.env.VERCEL_URL]
+    .map((host) => (host ?? "").trim())
+    .filter(Boolean)
+    .map((host) => `https://${host}`);
+}
+
 /** Returns true if the given request origin may call this API. */
 export function isOriginAllowed(origin: string | null): boolean {
   if (!origin) return true; // non-browser clients (curl, spike script)
@@ -29,7 +50,11 @@ export function isOriginAllowed(origin: string | null): boolean {
     .split(",")
     .map((s) => s.trim().replace(/\/$/, ""))
     .filter(Boolean);
-  return allowed.includes(origin) || LOCAL_ORIGINS.includes(origin);
+  return (
+    allowed.includes(origin) ||
+    LOCAL_ORIGINS.includes(origin) ||
+    ownOrigins().includes(origin)
+  );
 }
 
 export function corsHeaders(origin: string | null): Record<string, string> {
