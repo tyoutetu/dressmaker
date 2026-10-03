@@ -129,6 +129,9 @@ npm ci
 npm run db:init           # applies sql/schema.sql (idempotent)
 ```
 
+Deploys run the same command first, so this is only needed when working against
+a database the deployment does not own.
+
 Tables: `generations` (metadata only — no screenshots), `feedback`,
 `usage_daily`, `global_usage_daily`, plus the `reserve_generation_quota()`
 function.
@@ -152,13 +155,20 @@ same origin, so there is no CORS layer and no API base URL to configure.
 ```json
 {
   "installCommand": "npm ci && cd web && npm ci",
-  "buildCommand": "cd web && npm run build",
+  "buildCommand": "npm run db:init && cd web && npm run build",
   "outputDirectory": "web/dist",
   "functions": {
     "api/*.ts": { "maxDuration": 300, "includeFiles": "assets/npcs/**" }
   }
 }
 ```
+
+`buildCommand` applies the database schema before building the site. `sql/schema.sql`
+is idempotent, so running it on every deploy keeps the tables and the
+`reserve_generation_quota()` function in step with the code without anyone having
+to remember a manual step — and it means a deploy fails loudly instead of
+publishing a build that cannot reach its own database. The trade is that a
+deploy now needs the database to be reachable.
 
 Handlers use Vercel's documented Web-standard shape for the Node.js runtime:
 each file exports a named route function (`(request: Request) => Response`) and a
