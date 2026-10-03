@@ -49,6 +49,28 @@ README 定位原文要点：
 
 倒序。**建档时未运行任何构建/测试**，故区分「建档实测」与「仓库内既有证据」。
 
+### 2026-10-03 — 接入 Neon：schema 随部署自动应用
+
+- 提交 `190cdc9`（`vercel.json` 的 `buildCommand` 前置 `npm run db:init`；README 同步）
+- **背景（实测，两条路都不通）**：Vercel 的 Neon 集成把 `DATABASE_URL` 建为
+  `type: sensitive`。REST API `GET /v1/projects/{id}/env/{envId}?decrypt=true` 返回空值；
+  `vercel env pull` 对 18 个变量一律写 `[SENSITIVE]` 占位符。
+  **密钥在设计上就取不出来**，因此 agent 无法直接执行 `db:init`，
+  线上会因缺表而 fail-closed 返回 503。
+- **解法**：把建表接进部署流程。`sql/schema.sql` 本就是幂等的
+  （文件内注明 safe to apply repeatedly），所以每次部署自动对齐表结构，
+  不需要任何人持有或转交数据库密钥。
+- **验证（构建日志原文，非推测）**：
+  ```
+  > dressmaker-preview-api@0.1.0 db:init
+  > node --env-file-if-exists=.env --import tsx scripts/db-init.ts
+  Schema applied: generations, feedback, usage_daily, global_usage_daily, reserve_generation_quota().
+  ```
+  这一行同时证明：连接串有效、Neon 从 Vercel 可达、4 张表已建、配额函数已建。
+  `db-init.ts` 失败即 `exit 1`，构建成功本身即是它没出错的证据。
+- **代价（有意取舍）**：部署现在依赖数据库可达。宁可部署失败，
+  也不要发布一个连不上自己数据库的构建——与本项目 fail-closed 的一贯取向一致。
+
 ### 2026-10-03 — 部署架构迁移：GitHub Pages + Vercel 双项目 → Vercel 单项目
 
 - 提交 `4acf8e8`（重构）、`ea97f5a`（合并）、`8b6e26c`（来源校验修复）
@@ -203,9 +225,7 @@ README 定位原文要点：
 
 ## 下一步
 
-1. **建 Neon 数据库**（只能网页做，是当前唯一挡着「能用」的一步）：
-   Vercel 控制台 → 项目 `dressmaker` → **Storage** → **Create Database** → **Neon**（免费档）。
-   建完 Vercel 自动注入 `DATABASE_URL`，然后 `npm run db:init` 建表并重新部署。
+1. ~~建 Neon 数据库~~ ✅ **已完成**（2026-10-03）。schema 由部署自动应用。
 2. **端到端验证** —— ⚠️ 当前网络无法访问 `*.vercel.app`，需用户在有访问能力的环境确认：
    打开 `https://dressmaker-rouge.vercel.app/`，确认 `/api/health` 返回 `ok:true` 且 `db:true`，
    并真的生成一张图。
@@ -232,9 +252,9 @@ README 定位原文要点：
 - **旧入口（legacy）**：https://tyoutetu.github.io/dressmaker/ —— **实测 HTTP 200**（可访问）。
   但它是 GitHub Pages 静态托管，`*.github.io/api/*` 是 404，**无法生成**；
   且前端已改为默认同源，Pages 上不再有可用 API。
-- ⚠️ **无 `DATABASE_URL`** → 即使可达，`/api/generate` 与 `/api/quota` 也会 fail-closed 返回 503。
-  **这是当前唯一挡住「能用」的硬缺口。**
-- 端到端能否生成：**未验证**（当前网络无法访问该域名，需用户在有访问能力的环境确认）
+- ✅ **数据库已接入**：Neon 集成注入 `DATABASE_URL`，schema 随部署自动应用
+  （构建日志确认 4 张表 + `reserve_generation_quota()` 均已建）
+- 端到端能否生成：**仍未验证**（当前网络无法访问该域名，需用户在有访问能力的环境确认）
 - 已删除：旧项目 `dressmaker-api`（双项目方案已废弃）
 
 ## 已知问题 / 待确认
