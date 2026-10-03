@@ -11,6 +11,12 @@ dist/
 # which the sandbox blocks). Run it as ./.vercel-cli/node_modules/.bin/vercel
 .vercel-cli/
 
+# Short-lived deploy credential. The CLI's own OAuth token cannot be used from
+# the agent sandbox (it must write refreshed tokens outside the workspace), so a
+# Personal Access Token is supplied here instead. Delete it when the deploy is
+# done, and revoke the token in Vercel.
+.vercel-token
+
 # Real environment files at any level; only the template is tracked.
 .env
 .env.*
