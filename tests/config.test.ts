@@ -9,15 +9,25 @@ import { ApiError } from "../lib/errors";
 import { estimatedCost } from "../lib/provider";
 
 describe("per-network limit configuration", () => {
-  test("defaults to the product maximum and allows lowering or zero", () => {
-    assert.equal(USER_DAILY_GENERATION_LIMIT_MAX, 3);
-    assert.deepEqual(readQuotaLimits({}), { userLimit: 3, globalLimit: 100 });
+  test("defaults to the sanity ceiling and allows lowering or zero", () => {
+    assert.equal(USER_DAILY_GENERATION_LIMIT_MAX, 100);
+    assert.deepEqual(readQuotaLimits({}), { userLimit: 100, globalLimit: 100 });
     assert.equal(readQuotaLimits({ USER_DAILY_GENERATION_LIMIT: "2" }).userLimit, 2);
     assert.equal(readQuotaLimits({ USER_DAILY_GENERATION_LIMIT: "0" }).userLimit, 0);
   });
 
-  test("fails closed when an operator tries to raise it above 3", () => {
-    for (const value of ["4", "10", "1000"]) {
+  test("accepts a per-network limit up to the ceiling, so it can stop binding", () => {
+    assert.equal(readQuotaLimits({ USER_DAILY_GENERATION_LIMIT: "100" }).userLimit, 100);
+    // Raising this cannot raise the daily spend: the global ceiling is what
+    // bounds cost, and it is read separately.
+    assert.deepEqual(readQuotaLimits({ USER_DAILY_GENERATION_LIMIT: "100" }), {
+      userLimit: 100,
+      globalLimit: 100,
+    });
+  });
+
+  test("fails closed when an operator mistypes it above the ceiling", () => {
+    for (const value of ["101", "1000", "99999"]) {
       assert.throws(
         () => readQuotaLimits({ USER_DAILY_GENERATION_LIMIT: value }),
         (err: unknown) => err instanceof ApiError && err.code === "service_unavailable",

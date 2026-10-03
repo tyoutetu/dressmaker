@@ -311,8 +311,8 @@ describe("POST /api/generate", () => {
     }
   });
 
-  test("refuses a USER_DAILY_GENERATION_LIMIT above the product maximum of 3", async () => {
-    const h = await harness({ env: { USER_DAILY_GENERATION_LIMIT: "4" } });
+  test("refuses a USER_DAILY_GENERATION_LIMIT above the sanity ceiling", async () => {
+    const h = await harness({ env: { USER_DAILY_GENERATION_LIMIT: "101" } });
     try {
       const response = await post(await validForm());
       const body = await response.json();

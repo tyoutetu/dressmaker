@@ -9,7 +9,7 @@ const ITEMS: Array<{ q: string; a: string }> = [
   },
   {
     q: "How many previews do I get?",
-    a: "Up to three per day per network by default, and they refresh at 00:00 UTC. The limit is applied to your internet connection, not to this browser, so everyone on a shared Wi-Fi (home, dorm, café) shares it, and clearing your browser storage does not reset it. Sending a request counts as one attempt even if the connection or the AI provider fails afterwards.",
+    a: "Each internet connection gets a limited number of previews per day — the exact figure is shown at the top of this page — and they refresh at 00:00 UTC. The limit is applied to your internet connection, not to this browser, so everyone on a shared Wi-Fi (home, dorm, café) shares it, and clearing your browser storage does not reset it. Sending a request counts as one attempt even if the connection or the AI provider fails afterwards.",
   },
   {
     q: "Do you store my screenshots?",

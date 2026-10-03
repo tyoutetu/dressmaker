@@ -30,12 +30,19 @@ export interface QuotaLimits {
 }
 
 /**
- * Absolute product maximum for the per-network ceiling. `USER_DAILY_GENERATION_LIMIT`
- * may lower this or set it to zero, but an operator can never raise it: a value
- * above the product maximum is a mistake and fails closed instead of quietly
- * handing out more paid attempts than the product allows.
+ * Sanity ceiling for the per-network limit. `USER_DAILY_GENERATION_LIMIT` may be
+ * anything from 0 up to this; a larger value is treated as a typo and fails
+ * closed rather than quietly handing out more paid attempts than intended.
+ *
+ * This is deliberately **not** the product's cost ceiling. The ceiling is
+ * `GLOBAL_DAILY_GENERATION_LIMIT`, which caps spend across every network
+ * together; the per-network limit only decides how that shared budget is shared
+ * out. Raising it therefore cannot increase the worst-case daily spend — it
+ * only lets one network consume more of the budget that already exists. Setting
+ * the per-network limit at or above the global one makes it non-binding, which
+ * is what a single-operator deployment wants.
  */
-export const USER_DAILY_GENERATION_LIMIT_MAX = 3;
+export const USER_DAILY_GENERATION_LIMIT_MAX = 100;
 
 /**
  * Read the daily cost ceilings. A malformed value fails closed instead of
