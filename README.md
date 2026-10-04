@@ -190,7 +190,7 @@ Environment variables (Production and Preview), matching
 | `QWEN_IMAGE_MODEL` | default `qwen-image-3.0` |
 | `USER_DAILY_GENERATION_LIMIT` | `3` (may be lowered or set to `0`; values above 3 are rejected) |
 | `QUOTA_UNLIMITED_IPS` | optional, comma-separated exact addresses exempt from the per-network ceiling. Leave unset and nobody is exempt |
-| `STATS_TOKEN` | optional. Enables `GET /api/stats`. Unset = the route answers 404. Use 16+ characters |
+| `STATS_TOKEN` | optional. Enables `GET /api/stats`, the aggregate usage rollup. Unset = the route answers 404. Use 16+ characters. `VITE_GA4_ID` covers *visits*; this covers *generations* — they are different data and neither substitutes for the other |
 | `GLOBAL_DAILY_GENERATION_LIMIT` | `100` (`0` = kill switch) |
 | `ALLOWED_ORIGINS` | optional, comma-separated. Only needed when the frontend is served from a *different* origin than the API; same-origin requests need no entry |
 
@@ -198,9 +198,24 @@ Optional: `QWEN_PROMPT_EXTEND`, `QWEN_ENABLE_THINKING` (both default to
 `false` — see [§5](#5-provider-qwen-image-default) for why), `GEMINI_API_KEY`,
 `GEMINI_IMAGE_MODEL`, `OPENAI_API_KEY`, `OPENAI_IMAGE_MODEL`,
 `OPENAI_IMAGE_QUALITY`, `MAX_UPLOAD_BYTES`, `MAX_IMAGE_DIMENSION`,
-`MAX_OUTPUT_BYTES`, `GENERATION_TIMEOUT_MS`, and the operator-provided
-`ESTIMATED_COST_*_USD` cost estimates (decimals such as `0.03` are preserved;
-leave them unset and the estimate is recorded as NULL rather than invented).
+`MAX_OUTPUT_BYTES`, `GENERATION_TIMEOUT_MS`, and `VITE_SITE_URL`/`VITE_GA4_ID`
+(§6).
+
+`VITE_*` variables are **baked into the JavaScript at build time**, not read at
+runtime: changing one requires a redeploy, and saving the variable alone does
+nothing.
+
+### Cost estimates
+
+`ESTIMATED_COST_<PROVIDER>_PER_IMAGE_USD` feeds the ops-only `estimated_cost`
+column. Despite the `PER_IMAGE` in the name, `estimatedCost()` is called **once
+per generation** and the value is stored once per generation row — it is not
+multiplied by the number of input images a request sends. For Qwen Image 3.0 the
+platform bills ¥0.02 per input image (a generation sends two: the customer
+reference and the screenshot) plus ¥0.18 for the 1024×1024 output, so the honest
+value is the **whole generation**, ¥0.22, not a third of it. Decimals such as
+`0.031` are preserved; leave it unset and the column records NULL rather than an
+invented price.
 
 Verify the deployment:
 
