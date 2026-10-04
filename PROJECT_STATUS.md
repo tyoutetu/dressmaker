@@ -49,6 +49,35 @@ README 定位原文要点：
 
 倒序。**建档时未运行任何构建/测试**，故区分「建档实测」与「仓库内既有证据」。
 
+### 2026-10-04 — 开启 GA4 访问统计 + 轮换 stats token + 配置成本单价
+
+- **背景**：用户问「有没有人访问过网站」。核查后确认**访问量从未被采集**——
+  页面是静态的走 CDN，`/api/quota` 只读不写库，Vercel Web Analytics 也没开。
+  `/api/stats` 只能回答「生成量」，答不了「访问量」。
+- **踩到的坑（我自己的表述问题）**：前一轮把「使用量监控」当标题、把
+  「用过 = 尝试生成过，纯浏览无记录」写在第 5 段，用户合理读成了「访问量」。
+  **这种区分必须放在标题，不能藏正文里。** 另外当时给了 `?token=你的token`
+  的 URL 却从未把 token 值给用户、自己还删了副本 → 端点和 token 都在，
+  但**谁都读不了**。
+- **本轮完成**：
+  | 项 | 值 | 作用 |
+  |---|---|---|
+  | `VITE_GA4_ID` | `G-ZSPJPNZTJ9` | 访问量统计（浏览层） |
+  | `STATS_TOKEN` | 已轮换（32 字符） | 生成量统计（使用层） |
+  | `ESTIMATED_COST_QWEN_PER_IMAGE_USD` | `0.031` | 让花费统计不再是 0 |
+- **验证（生产实测）**：
+  - GA4：脚本标签存在于 DOM、`dataLayer` 有 5 条（含 `config G-ZSPJPNZTJ9` 与
+    `event tool_view`）、`window.gtag` 已定义、`gtag/js` 本身可达 200
+  - `/api/stats?token=` → **200**；无 token → **401**（门禁有效）
+  - `/api/health` → `{ok:true, db:true, quotaConfigured:true}`
+- **发现并记录**：`ESTIMATED_COST_*_PER_IMAGE_USD` 命名有陷阱——名字写 PER_IMAGE，
+  但 `estimatedCost()` **每次生成只调一次**、每行只存一个值，**不乘输入图数量**。
+  Qwen Image 3.0 一次生成实际花 ¥0.22（输入 ¥0.02×2 + 输出 ¥0.18），
+  所以配的是整次成本而非三分之一。已在 README 与 .env.example 写明。
+- ⚠️ **历史数据补不回来**：GA4 从配置那一刻开始统计；之前那段访问量无论如何都没有。
+- ⚠️ 已有的那 1 条生成记录 `estimated_cost` 是 NULL（当时没配单价），
+  所以 `allTime.estimatedCost` 现在仍显示 0，**下一次生成才会开始计**。
+
 ### 2026-10-03 — 新增 /api/stats 使用量端点（默认关闭）
 
 - 提交 `3a83ed9`
@@ -308,7 +337,9 @@ README 定位原文要点：
 6. **决定 GitHub Pages 工作流的去留**：`.github/workflows/deploy-web.yml` 仍在，
    每次 push 都会往 Pages 发一份没有 API 的前端。迁移完成后建议删除
    （本轮未删，避免在 Vercel 未验证前拆掉退路）。
-7. **GA4 埋点仍不产生数据**：Vercel 项目未设 `VITE_GA4_ID`（需在 Vercel 环境变量里配）。
+7. ~~GA4 埋点不产生数据~~ ✅ **已完成**（2026-10-04 配好 `VITE_GA4_ID`）
+8. **Vercel PAT 有效期短**：用户 2026-10-03 首个 PAT 设了 1 天，次日即对团队 scope 失效
+   （`/v2/user` 200 但项目接口全 403）。2026-10-04 换新 token 恢复。**建议设 7~30 天。**
 8. 上传内容假定为游戏截图（README 明示 UI 只索取游戏截图，但模型仍可能拒绝或给出差结果）。
 
 ## 是否已上线
